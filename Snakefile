@@ -35,14 +35,14 @@ rule sortmerna:
         R2 = lambda wildcards: samples[wildcards.sample]["R2"],
         db = "resources/sortmerna/silva-euk-18s-id95.fasta"
     output:
-        R1 = "results/rRNA/{sample}_R1.rRNA.fastq.gz",
-        R2 = "results/rRNA/{sample}_R2.rRNA.fastq.gz"
+        R1 = "results/rRNA/{sample}.rRNA_fwd.fastq.gz",
+        R2 = "results/rRNA/{sample}.rRNA_rev.fastq.gz"
     conda: "envs/sortmerna.yml"
     log:
-        runlog="results/logs/sortmerna/{sample}.log",
-        reportlog="results/sortmerna/{sample}.log"
+        runlog="results/logs/rRNA/{sample}.log",
+        reportlog="results/rRNA/{sample}.log"
     params:
-        workdir = "$TMPDIR/sortmerna/{sample}.wd",
+        workdir = "$TMPDIR/rRNA/{sample}.wd",
         outdir = lambda wildcards, output: os.path.dirname(output.R1)
     threads: 10
     resources:
