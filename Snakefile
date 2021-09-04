@@ -1,4 +1,11 @@
 import pandas as pd
+import os
+from snakemake.utils import validate
+
+container: "docker://continuumio/miniconda3:4.9.2"
+
+validate(config,schema="config/config.schema.yml",set_default=True)
+
 
 def parse_samples(f):
     df = pd.read_csv(f, index_col=0, sep="\t", header=0)
