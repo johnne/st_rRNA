@@ -70,7 +70,7 @@ rule download_pr2:
         url=config["PR2"]["url"]
     shell:
         """
-        curl -L -o {output[0]}.gz > {log} 2>&1
+        curl -L -o {output[0]}.gz {params.url} > {log} 2>&1
         gunzip {output[0]}.gz
         """
 
