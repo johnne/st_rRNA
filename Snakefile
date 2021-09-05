@@ -80,6 +80,8 @@ rule assign_taxonomy:
         "resources/pr2/pr2.dada2.fasta"
     output:
         "results/taxonomy/{sample}.taxonomy.tsv"
+    log:
+        "results/logs/assignTaxonomy.{sample}.log"
     params:
         minBoot = config["assignTaxonomy"]["minBoot"],
         outputBootstraps = config["assignTaxonomy"]["outputBootstraps"]
