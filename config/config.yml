@@ -1,0 +1,7 @@
+sample_list: "config/samples.tsv"
+pr2:
+  url: "https://github.com/pr2database/pr2database/releases/download/v4.14.0/pr2_version_4.14.0_SSU_dada2.fasta.gz"
+assignTaxonomy:
+  minBoot: 100
+  outputBootstraps: True
+

@@ -60,3 +60,29 @@ rule sortmerna:
         mv {params.workdir}/{wildcards.sample}.rRNA.log {log.reportlog}
         rm -rf {params.workdir}
         """
+
+rule download_pr2:
+    output:
+        "resources/pr2/pr2.dada2.fasta"
+    log:
+        "results/logs/PR2/download.log"
+    params:
+        url=config["PR2"]["url"]
+    shell:
+        """
+        curl -L -o {output[0]}.gz > {log} 2>&1
+        gunzip {output[0]}.gz
+        """
+
+rule assign_taxa:
+    input:
+        "results/rRNA/{sample}.rRNA_rev.fastq.gz",
+        "resources/pr2/pr2.dada2.fasta"
+    output:
+        "results/taxonomy/{sample}.taxonomy.tsv"
+    params:
+        minBoot = config["assignTaxa"]["minBoot"],
+        outputBootstraps = config["assignTaxa"]["outputBootstraps"]
+    threads: 10
+    script:
+        "src/assignTaxa.R"
