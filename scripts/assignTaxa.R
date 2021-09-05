@@ -14,7 +14,7 @@ threads <- snakemake@threads
 library(dada2)
 set.seed(100)
 training_fasta <- system.file("extdata", refFasta, package="dada2")
-taxonomy <- assignTaxonomy(seqs, training_fasta, minBoot=minBoot,
+taxonomy <- assignTaxonomy(input, training_fasta, minBoot=minBoot,
                            outputBootstraps=outputBootstraps,
                            multithread=threads, verbose=TRUE)
 rownames(taxonomy) <- names(rownames(taxonomy))
