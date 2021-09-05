@@ -87,4 +87,4 @@ rule assign_taxonomy:
         outputBootstraps = config["assignTaxonomy"]["outputBootstraps"]
     threads: 10
     script:
-        "script/assignTaxa.R"
+        "scripts/assignTaxa.R"
