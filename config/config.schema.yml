@@ -9,3 +9,23 @@ properties:
     type: string
     description: "Path to a sample sheet"
     default: "config/samples.tsv"
+  PR2:
+    type: object
+    default:
+      url: "https://github.com/pr2database/pr2database/releases/download/v4.14.0/pr2_version_4.14.0_SSU_dada2.fasta.gz"
+    properties:
+      url:
+        type: string
+        description: "URL to PR2 release dada2 file"
+  assignTaxonomy:
+    type: object
+    default:
+      minBoot: 100
+      outputBootstraps: True
+    properties:
+      minBoot:
+        type: integer
+        description: "Number of bootstraps to run for assignTaxonomy"
+      outputBootstraps:
+        type: boolean
+        description: "Whether to output bootstraps for assignTaxonomy"

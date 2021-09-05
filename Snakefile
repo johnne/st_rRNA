@@ -15,7 +15,7 @@ samples = parse_samples(config["sample_list"])
 
 rule all:
     input:
-        "results/dada2/taxonomy.tsv"
+        expand("results/taxonomy/{sample}.taxonomy.tsv", sample=samples.keys())
 
 rule download_sortmerna_db:
     output:
@@ -74,15 +74,15 @@ rule download_pr2:
         gunzip {output[0]}.gz
         """
 
-rule assign_taxa:
+rule assign_taxonomy:
     input:
         "results/rRNA/{sample}.rRNA_rev.fastq.gz",
         "resources/pr2/pr2.dada2.fasta"
     output:
         "results/taxonomy/{sample}.taxonomy.tsv"
     params:
-        minBoot = config["assignTaxa"]["minBoot"],
-        outputBootstraps = config["assignTaxa"]["outputBootstraps"]
+        minBoot = config["assignTaxonomy"]["minBoot"],
+        outputBootstraps = config["assignTaxonomy"]["outputBootstraps"]
     threads: 10
     script:
         "src/assignTaxa.R"
