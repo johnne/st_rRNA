@@ -79,7 +79,8 @@ rule assign_taxonomy:
         seqs = "results/rRNA/{sample}.rRNA_rev.fastq.gz",
         training_fasta = "resources/pr2/pr2.dada2.fasta"
     output:
-        "results/taxonomy/{sample}.taxonomy.tsv"
+        taxdf = "results/taxonomy/{sample}.taxonomy.tsv",
+        bootdf = "results/taxonomy/{sample}.bootstrap.tsv"
     log:
         "results/logs/assignTaxonomy.{sample}.log"
     params:
