@@ -19,3 +19,4 @@ taxonomy <- assignTaxonomy(seqs=seqs, refFasta=refFasta, minBoot=minBoot,
                            multithread=threads, verbose=TRUE)
 rownames(taxonomy) <- names(rownames(taxonomy))
 write.table(taxonomy, output, sep="\t", quote=FALSE)
+print("DONE")
