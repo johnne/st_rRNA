@@ -77,7 +77,7 @@ rule download_pr2:
 rule assign_taxonomy:
     input:
         seqs = "results/rRNA/{sample}.rRNA_rev.fastq.gz",
-        training_fasta = "resources/pr2/pr2.dada2.fasta"
+        refFasta = "resources/pr2/pr2.dada2.fasta"
     output:
         taxdf = "results/taxonomy/{sample}.taxonomy.tsv",
         bootdf = "results/taxonomy/{sample}.bootstrap.tsv"
