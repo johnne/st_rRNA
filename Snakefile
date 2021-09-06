@@ -86,6 +86,8 @@ rule assign_taxonomy:
         minBoot = config["assignTaxonomy"]["minBoot"],
         outputBootstraps = config["assignTaxonomy"]["outputBootstraps"]
     conda: "envs/dada2.yml"
+    resources:
+        runtime = lambda wildcards, attempt: attempt**2*60*4
     threads: 10
     script:
         "scripts/assignTaxa.R"
