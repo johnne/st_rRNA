@@ -1,7 +1,10 @@
 import pandas as pd
 import os
 from snakemake.utils import validate
-
+#TODO: Also identify 16S rRNA
+rRNA = {"16S": ["silva-arc-16s-id95.fasta", "silva-bac-16s-id90.fasta"],
+        "18S": ["silva-euk-18s-id95.fasta"]}
+#TODO: Figure out how to link taxonomy/counts to spots
 container: "docker://continuumio/miniconda3:4.9.2"
 
 validate(config,schema="config/config.schema.yml",set_default=True)
@@ -19,30 +22,36 @@ rule all:
 
 rule download_sortmerna_db:
     output:
-        "resources/sortmerna/silva-euk-18s-id95.fasta"
+        "resources/sortmerna/{f}"
     params:
         url_base = "https://raw.githubusercontent.com/biocore/sortmerna/master/data/rRNA_databases/"
     log:
-        "resources/sortmerna/silva-euk-18s-id95.log"
+        "resources/sortmerna/download-{f}.log"
     shell:
         """
-        curl -L -o {output[0]} {params.url_base}/silva-euk-18s-id95.fasta > {log} 2>&1
+        curl -L -o $f {params.url_base}/{wildcards.f} > {log} 2>&1
         """
+
+def rRNA_fasta(wildcards):
+    input = []
+    for f in rRNA[wildcards.subunit]:
+        input.append(f"resources/sortmerna/{f}")
+    return input
 
 rule sortmerna:
     input:
         R1 = lambda wildcards: samples[wildcards.sample]["R1"],
         R2 = lambda wildcards: samples[wildcards.sample]["R2"],
-        db = "resources/sortmerna/silva-euk-18s-id95.fasta"
+        db = rRNA_fasta
     output:
-        R1 = "results/rRNA/{sample}.rRNA_fwd.fastq.gz",
-        R2 = "results/rRNA/{sample}.rRNA_rev.fastq.gz"
+        R1 = "results/rRNA/{subunit}/{sample}.rRNA_fwd.fastq.gz",
+        R2 = "results/rRNA/{subunit}/{sample}.rRNA_rev.fastq.gz"
     conda: "envs/sortmerna.yml"
     log:
-        runlog="results/logs/rRNA/{sample}.log",
-        reportlog="results/rRNA/{sample}.log"
+        runlog="results/logs/rRNA/{subunit}/{sample}.log",
+        reportlog="results/rRNA/{subunit}/{sample}.log"
     params:
-        workdir = "$TMPDIR/rRNA/{sample}.wd",
+        workdir = "$TMPDIR/rRNA/{subunit}.{sample}.wd",
         outdir = lambda wildcards, output: os.path.dirname(output.R1)
     threads: 10
     resources:
