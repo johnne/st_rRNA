@@ -5,8 +5,8 @@ sink(log)
 sink(log, type="message")
 
 seqs <- snakemake@input$seqs
-taxdf <- snakemake@output$taxdf
-bootdf <- snakemake@output$bootdf
+taxdf_file <- snakemake@output$taxdf
+bootdf_file <- snakemake@output$bootdf
 refFasta <- snakemake@input$refFasta
 minBoot <- snakemake@params$minboot
 outputBootstraps <- snakemake@params$outputBootstraps
@@ -23,6 +23,6 @@ taxdf <- df[, grepl("tax.", colnames(df))]
 colnames(taxdf) <- gsub("tax.", "", colnames(taxdf))
 bootdf <- df[, grepl("boot", colnames(df))]
 colnames(bootdf) <- gsub("boot.", "", colnames(bootdf))
-write.table(taxdf, taxdf, sep="\t", quote=FALSE)
-write.table(bootdf, bootdf, sep="\t", quote=FALSE)
+write.table(taxdf, taxdf_file, sep="\t", quote=FALSE)
+write.table(bootdf, bootdf_file, sep="\t", quote=FALSE)
 print("DONE")
