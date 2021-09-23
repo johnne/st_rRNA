@@ -1,7 +1,15 @@
 sample_list: "config/samples.tsv"
-PR2:
-  url: "https://github.com/pr2database/pr2database/releases/download/v4.14.0/pr2_version_4.14.0_SSU_dada2.fasta.gz"
+# Subunits to analyse, currently only 16S and 18S are supported
+subunits:
+  - "16S"
+  - "18S"
 assignTaxonomy:
   minBoot: 100
   outputBootstraps: True
+  database:
+    #RDP: https://zenodo.org/record/4310151/files/rdp_train_set_18.fa.gz?download=1
+    #GTDB: https://zenodo.org/record/2541239/files/GTDB_bac-arc_ssu_r86.fa.gz?download=1
+    #SILVA: https://zenodo.org/record/4587955/files/silva_nr99_v138.1_train_set.fa.gz?download=1
+    16S: "https://zenodo.org/record/2541239/files/GTDB_bac-arc_ssu_r86.fa.gz?download=1"
+    18S: "https://github.com/pr2database/pr2database/releases/download/v4.14.0/pr2_version_4.14.0_SSU_dada2.fasta.gz"
 
