@@ -9,20 +9,25 @@ properties:
     type: string
     description: "Path to a sample sheet"
     default: "config/samples.tsv"
-  PR2:
-    type: object
+  subunits:
+    type: array
+    description: "Subunits to run analysis for"
     default:
-      url: "https://github.com/pr2database/pr2database/releases/download/v4.14.0/pr2_version_4.14.0_SSU_dada2.fasta.gz"
-    properties:
-      url:
-        type: string
-        description: "URL to PR2 release dada2 file"
+      - "16S"
+      - "18S"
+    items:
+      enum: ["16S", "18S"]
   assignTaxonomy:
     type: object
     default:
       minBoot: 100
       outputBootstraps: True
     properties:
+      database:
+        type: object
+        default:
+          16S: "https://zenodo.org/record/2541239/files/GTDB_bac-arc_ssu_r86.fa.gz?download=1"
+          18S: "https://github.com/pr2database/pr2database/releases/download/v4.14.0/pr2_version_4.14.0_SSU_dada2.fasta.gz"
       minBoot:
         type: integer
         description: "Number of bootstraps to run for assignTaxonomy"
