@@ -93,7 +93,7 @@ rule sortmerna:
         mkdir -p {params.workdir}
         gunzip -c {input.R2} > {params.R2}
         sortmerna --threads {threads} --workdir {params.workdir} --fastx \
-            --reads {params.R2} {params.ref_string}
+            --reads {params.R2} {params.ref_string} \
             --aligned {params.workdir}/{wildcards.sample}.rRNA > {log.runlog} 2>&1
         rm {params.R2}
         gzip {params.workdir}/*.fastq
