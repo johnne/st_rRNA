@@ -1,11 +1,10 @@
 import os
 from snakemake.utils import validate
 include: "scripts/common.py"
-
+localrules: multiqc, report
 rRNA = {"16S": ["silva-arc-16s-id95.fasta", "silva-bac-16s-id90.fasta"],
         "18S": ["silva-euk-18s-id95.fasta"]}
 #TODO: Figure out how to link taxonomy/counts to spots
-#TODO: Use Metaxa instead of sortmerna
 container: "docker://continuumio/miniconda3:4.9.2"
 
 validate(config,schema="config/config.schema.yml",set_default=True)
@@ -15,10 +14,14 @@ rule report:
     input:
         expand("results/taxonomy/{sample}.{subunit}.taxonomy.tsv",
             sample=samples.keys(),
-            subunit = config["subunits"])
+            subunit = config["subunits"]),
+        "results/report/sample_report.html"
+    log: "results/log/report.log"
     shell:
         """
+        exec &> {log}
         mkdir -p results/report
+        snakemake --unlock 
         snakemake --report results/report/snakemake_report.html
         """
 
@@ -77,7 +80,8 @@ rule sortmerna:
     params:
         workdir = "$TMPDIR/rRNA/{subunit}.{sample}.wd",
         R2 = "$TMPDIR/rRNA/{subunit}.{sample}.wd/R2.fastq",
-        outdir = lambda wildcards, output: os.path.dirname(output[0])
+        outdir = lambda wildcards, output: os.path.dirname(output[0]),
+        ref_string = lambda wildcards, input: " ".join([f"--ref {x}" for x in input.db])
     threads: 20
     resources:
         runtime = lambda wildcards, attempt: attempt ** 2 * 60 * 120
@@ -88,7 +92,7 @@ rule sortmerna:
         mkdir -p {params.workdir}
         gunzip -c {input.R2} > {params.R2}
         sortmerna --threads {threads} --workdir {params.workdir} --fastx \
-            --reads {params.R2} --ref {input.db} \
+            --reads {params.R2} {params.ref_string}
             --aligned {params.workdir}/{wildcards.sample}.rRNA > {log.runlog} 2>&1
         rm {params.R2}
         gzip {params.workdir}/*.fastq
@@ -111,12 +115,13 @@ rule multiqc:
     params:
         file_list = "results/report/multiqc_file_list.txt",
         outdir = lambda wildcards, output: os.path.dirname(output[0]),
-        name = lambda wildcards, input: os.path.basename(output[0])
+        name = lambda wildcards, output: os.path.basename(output[0])
     conda: "envs/multiqc.yml"
     shell:
         """
-        echo {input} > {params.file_list}
+        echo {input} | tr " " "\n" > {params.file_list}
         multiqc -f --file-list {params.file_list} -o {params.outdir} -n {params.name} > {log} 2>&1
+        rm {params.file_list}
         """
 
 rule download_train_set:
