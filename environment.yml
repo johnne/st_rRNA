@@ -6,3 +6,10 @@ channels:
 dependencies:
   - snakemake-minimal=6.7.0
   - pandas=1.3.2
+
+  # packages required to create snakemake reports
+  - pygments
+  - jinja2
+  - networkx
+  - pygraphviz
+  - imagemagick
