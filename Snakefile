@@ -73,7 +73,7 @@ rule sortmerna:
         R2 = lambda wildcards: samples[wildcards.sample]["R2"],
         db = rRNA_fasta
     output:
-        "results/rRNA/{subunit}/{sample}.rRNA.fastq.gz"
+        "results/rRNA/{subunit}/{sample}.R2.rRNA.fastq.gz"
     conda: "envs/sortmerna.yml"
     log:
         runlog="results/logs/rRNA/{subunit}/{sample}.log",
@@ -100,6 +100,30 @@ rule sortmerna:
         mv {params.workdir}/*.gz {params.outdir}
         mv {params.workdir}/{wildcards.sample}.rRNA.log {log.reportlog}
         #rm -rf {params.workdir}
+        """
+
+rule extract_R1:
+    """
+    Extracts R1 sequences for reads identified as rRNA
+    """
+    input:
+        R1 = lambda wildcards: samples[wildcards.sample]["R1"],
+        R2 = "results/rRNA/{subunit}/{sample}.R2.rRNA.fastq.gz"
+    output:
+        R1 = "results/rRNA/{subunit}/{sample}.R1.rRNA.fastq.gz"
+    log:
+        "results/logs/rRNA/{subunit}.{sample}.seqtk.log"
+    params:
+        ids = "$TMPDIR/{subunit}.{sample}.ids",
+        R1 = "$TMPDIR/{subunit}.{sample}.R1.rRNA.fastq.gz"
+    conda: "envs/seqtk.yml"
+    shell:
+        """
+        exec &> {log}
+        if [ -z ${{TMPDIR+x}} ]; then TMPDIR=/scratch; fi
+        gunzip -c {input.R2} | egrep "^@" | cut -f1 -d ' ' | sed 's/@//g' > {params.ids}
+        seqtk subseq {input.R1} {params.ids} | gzip -c > {params.R1}
+        mv {params.R1} {output.R1}
         """
 
 rule multiqc:
