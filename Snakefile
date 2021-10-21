@@ -156,6 +156,8 @@ rule sample_spots:
 rule gather_spots:
     input:
         expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.R2.rRNA.subsampled.fastq.gz",
+            barcode = barcodes.keys()),
+        expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.map.tsv",
             barcode = barcodes.keys())
     output:
         "results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz",
