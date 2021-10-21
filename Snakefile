@@ -1,11 +1,10 @@
 import os
 from snakemake.utils import validate
 include: "scripts/common.py"
-localrules: multiqc, report, download_sortmerna_db, download_train_set
+localrules: multiqc, report, download_sortmerna_db, download_train_set, extract_R1, sample
 configfile: "config/config.yml"
 rRNA = {"16S": ["silva-arc-16s-id95.fasta", "silva-bac-16s-id90.fasta"],
         "18S": ["silva-euk-18s-id95.fasta"]}
-#TODO: Figure out how to link taxonomy/counts to spots
 container: "docker://continuumio/miniconda3:4.9.2"
 
 validate(config,schema="config/config.schema.yml",set_default=True)
@@ -130,6 +129,8 @@ rule sample_spots:
         tmpdir = "$TMPDIR/{subunit}.{sample}.{barcode}",
         R1 = "$TMPDIR/{subunit}.{sample}.{barcode}/{sample}.{barcode}.R1.rRNA.fastq",
         R2 = "$TMPDIR/{subunit}.{sample}.{barcode}/{sample}.{barcode}.R2.rRNA.subsampled.fastq.gz"
+    resources:
+        runtime = lambda wildcards, attempt: attempt ** 2 * 60 * 2
     conda: "envs/seqkit.yml"
     shell:
         """
@@ -226,6 +227,6 @@ rule assign_taxonomy:
     conda: "envs/dada2.yml"
     resources:
         runtime = lambda wildcards, attempt: attempt**2*60*4
-    threads: 10
+    threads: 20
     script:
         "scripts/assignTaxa.R"
