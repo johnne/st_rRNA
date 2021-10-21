@@ -30,28 +30,6 @@ rule report:
         snakemake --report results/report/snakemake_report.html
         """
 
-rule download_metaxa_db:
-    output:
-        expand("resources/metaxa2/blast.{s}",
-            s = ["nhr","nin","nsd","nsi","nsq","taxonomy.txt","cutoffs.txt"]),
-        expand("resources/metaxa2/HMMs/{L}.hmm{suffix}",
-            L = ["A","B","C","E","M","N"],
-            suffix = ["",".h3f",".h3i",".h3m",".h3p"])
-    params:
-        outdir = lambda wildcards, output: os.path.dirname(output[0])
-    conda: "envs/metaxa.yml"
-    shell:
-        """
-        metaxa2_install_database -g SSU -d {params.outdir}
-        """
-
-rule metaxa:
-    conda: "envs/metaxa.yml"
-    shell:
-        """
-        metaxa2_x 
-        """
-
 rule download_sortmerna_db:
     """
     Downloads fasta files for 16S/18S for use with sortmerna
@@ -184,6 +162,12 @@ rule gather_spots:
         cat {input[1]} > {params.tmp2}
         mv {params.tmp2} {output[1]}
         """
+
+## Sample target rule
+rule sample:
+    input:
+        expand("results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz",
+            subunit = config["subunits"], sample=samples.keys())
 
 rule multiqc:
     """
