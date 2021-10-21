@@ -2,7 +2,7 @@ import os
 from snakemake.utils import validate
 include: "scripts/common.py"
 localrules: multiqc, report, download_sortmerna_db, download_train_set
-
+configfile: "config/config.yml"
 rRNA = {"16S": ["silva-arc-16s-id95.fasta", "silva-bac-16s-id90.fasta"],
         "18S": ["silva-euk-18s-id95.fasta"]}
 #TODO: Figure out how to link taxonomy/counts to spots
@@ -10,6 +10,10 @@ container: "docker://continuumio/miniconda3:4.9.2"
 
 validate(config,schema="config/config.schema.yml",set_default=True)
 samples = parse_samples(config["sample_list"])
+barcodes = read_barcodes(config["barcode_list"])
+
+wildcard_constraints:
+    barcode = "({})".format("|".join(barcodes.keys())),
 
 rule report:
     input:
@@ -88,7 +92,7 @@ rule sortmerna:
         runtime = lambda wildcards, attempt: attempt ** 2 * 60 * 120
     shell:
         """
-        if [ -z ${{TMPDIR+x}} ]; then TMPDIR=/scratch; fi
+        if [ -z ${{TMPDIR+x}} ]; then TMPDIR=temp; fi
         rm -rf {params.workdir}
         mkdir -p {params.workdir}
         gunzip -c {input.R2} > {params.R2}
@@ -116,14 +120,69 @@ rule extract_R1:
     params:
         ids = "$TMPDIR/{subunit}.{sample}.ids",
         R1 = "$TMPDIR/{subunit}.{sample}.R1.rRNA.fastq.gz"
-    conda: "envs/seqtk.yml"
+    conda: "envs/seqkit.yml"
     shell:
         """
         exec &> {log}
-        if [ -z ${{TMPDIR+x}} ]; then TMPDIR=/scratch; fi
+        if [ -z ${{TMPDIR+x}} ]; then TMPDIR=temp; fi
         gunzip -c {input.R2} | egrep "^@" | cut -f1 -d ' ' | sed 's/@//g' > {params.ids}
-        seqtk subseq {input.R1} {params.ids} | gzip -c > {params.R1}
+        seqkit grep -f {params.ids} {input.R1} | gzip -c > {params.R1}
         mv {params.R1} {output.R1}
+        """
+
+rule sample_spots:
+    """
+    1. Splits fastq file into spots
+    2. Clusters R1 sequences by UMIs
+    3. Samples X reads per UMI cluster
+    """
+    input:
+        R1 = "results/rRNA/{subunit}/{sample}.R1.rRNA.fastq.gz",
+        R2 = "results/rRNA/{subunit}/{sample}.R2.rRNA.fastq.gz"
+    output:
+        R2 = temp("results/rRNA/{subunit}/spots/{barcode}/{sample}.R2.rRNA.subsampled.fastq.gz"),
+        f = temp("results/rRNA/{subunit}/spots/{barcode}/{sample}.map.tsv")
+    log:
+        "results/logs/{subunit}/{sample}.sample_spots.{barcode}.log"
+    params:
+        X = config["seqs_per_spot"],
+        umi_start = config["UMI"]["start"],
+        umi_stop = config["UMI"]["stop"],
+        ids = "$TMPDIR/{subunit}.{sample}.{barcode}/{sample}",
+        tmpdir = "$TMPDIR/{subunit}.{sample}.{barcode}",
+        R1 = "$TMPDIR/{subunit}.{sample}.{barcode}/{sample}.{barcode}.R1.rRNA.fastq",
+        R2 = "$TMPDIR/{subunit}.{sample}.{barcode}/{sample}.{barcode}.R2.rRNA.subsampled.fastq.gz"
+    conda: "envs/seqkit.yml"
+    shell:
+        """
+        exec &> {log}
+        if [ -z ${{TMPDIR+x}} ]; then TMPDIR=temp; fi
+        mkdir -p {params.tmpdir}
+        seqkit grep -m 0 -P -r -s -p "^{wildcards.barcode}" {input.R1} > {params.R1}
+        python scripts/sample_spot.py {params.R1} --num_reads {params.X} \
+            --start {params.umi_start} --stop {params.umi_stop} \
+            --barcode {wildcards.barcode} --mapfile {output.f} > {params.ids}
+        seqkit grep -f {params.ids} {input.R2} | gzip -c > {params.R2}
+        mv {params.R2} {output.R2}
+        """
+
+rule gather_spots:
+    input:
+        expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.R2.rRNA.subsampled.fastq.gz",
+            barcode = barcodes.keys())
+    output:
+        "results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz",
+        "results/rRNA/{subunit}/{sample}.map.tsv"
+    params:
+        tmp1 = "$TMPDIR/{subunit}.{sample}.sampled.R2.rRNA.fastq.gz",
+        tmp2 = "$TMPDIR/{subunit}.{sample}.mapfile.tsv"
+    shell:
+        """
+        if [ -z ${{TMPDIR+x}} ]; then TMPDIR=temp; fi
+        cat {input[0]} > {params.tmp1}
+        mv {params.tmp1} {output[0]}
+        cat {input[1]} > {params.tmp2}
+        mv {params.tmp2} {output[1]}
         """
 
 rule multiqc:
@@ -158,7 +217,7 @@ rule download_train_set:
     log:
         "results/logs/DADA2/download.{subunit}.train.log"
     params:
-        url=lambda wildcards: config["assignTaxonomy"]["database"][wildcards.subunit]
+        url=lambda wildcards: config["assignTaxonomy"]["taxdb"][wildcards.subunit]
     shell:
         """
         curl -L -o {output[0]}.gz {params.url} > {log} 2>&1
@@ -170,7 +229,7 @@ rule assign_taxonomy:
     Assigns taxonomy to the R2 reads identified as rRNA by sortmerna 
     """
     input:
-        seqs = "results/rRNA/{subunit}/{sample}.rRNA.fastq.gz",
+        seqs = "results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz",
         refFasta = "resources/DADA2/{subunit}.train.fasta"
     output:
         taxdf = report("results/taxonomy/{sample}.{subunit}.taxonomy.tsv"),
