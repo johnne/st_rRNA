@@ -1,7 +1,15 @@
 import os
 from snakemake.utils import validate
 include: "scripts/common.py"
-localrules: multiqc, report, download_sortmerna_db, download_train_set, extract_R1, sample
+localrules:
+    multiqc,
+    report,
+    download_sortmerna_db,
+    download_train_set,
+    extract_R1,
+    sample,
+    gather_spots
+
 configfile: "config/config.yml"
 rRNA = {"16S": ["silva-arc-16s-id95.fasta", "silva-bac-16s-id90.fasta"],
         "18S": ["silva-euk-18s-id95.fasta"]}
