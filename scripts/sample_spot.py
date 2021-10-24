@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import sys
-import pyfastx
+from Bio import SeqIO
 import random
 random.seed(99)
 from argparse import ArgumentParser
