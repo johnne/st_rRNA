@@ -19,7 +19,7 @@ def read_fastq(f, umi_start=18, umi_stop=25):
     :return: dictionary with UMIs as keys and a list of reads as value
     """
     umi_dict = {}
-    for read in pyfastx.Fastq(f):
+    for read in SeqIO.parse(f, "fastq"):
         umi = read.seq[umi_start:umi_stop]
         try:
             umi_dict[umi].append(read)
@@ -53,7 +53,7 @@ def sample_spot(umi_reps, X=100):
     reads = []
     read_to_umi = {}
     for umi, read in umi_reps.items():
-        read_to_umi[read.name] = umi
+        read_to_umi[read.id] = umi
         reads.append(read)
     sampled_reads = random.sample(reads, k=min(X, len(reads)))
     return sampled_reads, read_to_umi
@@ -88,7 +88,7 @@ def write_read_ids(sampled_reads):
     """
     with sys.stdout as fhout:
         for read in sampled_reads:
-            fhout.write(f"{read.name}\n")
+            fhout.write(f"{read.id}\n")
 
 
 def main(args):

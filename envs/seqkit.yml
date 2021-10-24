@@ -4,6 +4,5 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - pyfastx=0.8.4
   - seqkit=2.0.0
   - biopython=1.79
