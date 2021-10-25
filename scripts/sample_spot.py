@@ -59,7 +59,7 @@ def sample_spot(umi_reps, X=100):
     return sampled_reads, read_to_umi
 
 
-def write_mapfile(f, barcode, read_to_umi):
+def write_mapfile(f, barcode, sampled_reads, read_to_umi):
     """
     Writes a mapfile of sampled reads to their UMI and (optionally)
     their barcode.
@@ -75,7 +75,8 @@ def write_mapfile(f, barcode, read_to_umi):
     else:
         b = f"\t{barcode}"
     with open(f, 'w') as fhout:
-        for read_id, umi in read_to_umi.items():
+        for read in sampled_reads:
+            umi = read_to_umi[read.id]
             fhout.write(f"{read_id}\t{umi}{b}\n")
 
 
@@ -97,7 +98,7 @@ def main(args):
     sampled_reads, read_to_umi = sample_spot(umi_reps, args.num_reads)
     write_read_ids(sampled_reads)
     if args.mapfile is not None:
-        write_mapfile(args.mapfile, args.barcode, read_to_umi)
+        write_mapfile(args.mapfile, args.barcode, sampled_reads, read_to_umi)
 
 
 if __name__ == "__main__":
