@@ -83,12 +83,12 @@ rule sortmerna:
         gunzip -c {input.R2} > {params.R2}
         sortmerna --threads {threads} --workdir {params.workdir} --fastx \
             --reads {params.R2} {params.ref_string} \
-            --aligned {params.workdir}/{wildcards.sample}.rRNA > {log.runlog} 2>&1
+            --aligned {params.workdir}/{wildcards.sample}.R2.rRNA > {log.runlog} 2>&1
         rm {params.R2}
         gzip {params.workdir}/*.fastq
         mv {params.workdir}/*.gz {params.outdir}
-        mv {params.workdir}/{wildcards.sample}.rRNA.log {log.reportlog}
-        #rm -rf {params.workdir}
+        mv {params.workdir}/{wildcards.sample}.R2.rRNA.log {log.reportlog}
+        rm -rf {params.workdir}
         """
 
 rule extract_R1:
@@ -155,9 +155,9 @@ rule sample_spots:
 
 rule gather_spots:
     input:
-        expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.R2.rRNA.subsampled.fastq.gz",
+        fq = expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.R2.rRNA.subsampled.fastq.gz",
             barcode = barcodes.keys()),
-        expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.map.tsv",
+        tsv = expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.map.tsv",
             barcode = barcodes.keys())
     output:
         "results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz",
@@ -168,9 +168,9 @@ rule gather_spots:
     shell:
         """
         if [ -z ${{TMPDIR+x}} ]; then TMPDIR=temp; fi
-        cat {input[0]} > {params.tmp1}
+        cat {input.fq} > {params.tmp1}
         mv {params.tmp1} {output[0]}
-        cat {input[1]} > {params.tmp2}
+        cat {input.tsv} > {params.tmp2}
         mv {params.tmp2} {output[1]}
         """
 
@@ -178,7 +178,9 @@ rule gather_spots:
 rule sample:
     input:
         expand("results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz",
-            subunit = config["subunits"], sample=samples.keys())
+            subunit = config["subunits"], sample = samples.keys()),
+        expand("results/rRNA/{subunit}/{sample}.map.tsv",
+            subunit = config["subunits"], sample = samples.keys())
 
 rule multiqc:
     """
