@@ -22,20 +22,20 @@ barcodes = read_barcodes(config["barcode_list"])
 wildcard_constraints:
     barcode = "({})".format("|".join(barcodes.keys())),
 
+def taxinput(config, samples):
+    input = []
+    if config["taxtool"] == "vsearch":
+        input += expand("results/taxonomy/{sample}.{subunit}.vsearch.tsv",
+                        sample = samples.keys(), subunit = config["subunits"])
+    else:
+        input += expand("results/taxonomy/{sample}.{subunit}.assignTaxonomy.tsv",
+                        sample = samples.keys(), subunit = config["subunits"])
+    return input
+
 rule report:
     input:
-        expand("results/taxonomy/{sample}.{subunit}.taxonomy.tsv",
-            sample=samples.keys(),
-            subunit = config["subunits"]),
+        taxinput(config, samples),
         "results/report/sample_report.html"
-    log: "results/log/report.log"
-    shell:
-        """
-        exec &> {log}
-        mkdir -p results/report
-        snakemake --unlock 
-        snakemake --report results/report/snakemake_report.html
-        """
 
 rule download_sortmerna_db:
     """
@@ -229,8 +229,8 @@ rule assign_taxonomy:
         seqs = "results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz",
         refFasta = "resources/DADA2/{subunit}.train.fasta"
     output:
-        taxdf = report("results/taxonomy/{sample}.{subunit}.taxonomy.tsv"),
-        bootdf = "results/taxonomy/{sample}.{subunit}.bootstrap.tsv"
+        taxdf = report("results/taxonomy/{sample}.{subunit}.assignTaxonomy.tsv"),
+        bootdf = "results/taxonomy/{sample}.{subunit}.assignTaxonomy.bootstrap.tsv"
     log:
         "results/logs/assignTaxonomy.{sample}.{subunit}.log"
     params:
@@ -243,3 +243,34 @@ rule assign_taxonomy:
     threads: 20
     script:
         "scripts/assignTaxa.R"
+
+rule download_vsearch:
+    output:
+        "resources/sintax/{subunit}.fasta"
+    log:
+        "results/logs/vsearch/{subunit}.download.log"
+    params:
+        url = lambda wildcards: config["vsearch"][wildcards.subunit]
+    shell:
+        """
+        curl -L -o {output[0]}.gz {params.url} > {log} 2>&1
+        gunzip {output[0]}.gz
+        """
+
+rule vsearch:
+    input:
+        seqs = "results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz",
+        db = "resources/sintax/{subunit}.fasta"
+    output:
+        report("results/taxonomy/{sample}.{subunit}.vsearch.tsv")
+    log:
+        "results/logs/vsearch/{sample}.{subunit}.log"
+    params:
+        cutoff = config["vsearch"]["cutoff"]
+    conda: "envs/vsearch.yml"
+    threads: 10
+    shell:
+        """
+        vsearch --threads {threads} --sintax {input.seqs} --db {input.db} \
+            --sintax_cutoff {params.cutoff} --tabbedout {output[0]} > {log} 2>&1 
+        """
