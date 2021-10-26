@@ -36,9 +36,9 @@ properties:
   assignTaxonomy:
     type: object
     default:
-      minBoot: 50
+      minBoot: 0
       outputBootstraps: True
-      tryRC: True
+      tryRC: False
     properties:
       database:
         type: object

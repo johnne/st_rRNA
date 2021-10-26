@@ -15,9 +15,9 @@ vsearch:
   16S: "https://www.drive5.com/sintax/rdp_16s_v18.fa.gz"
   18S: "https://www.drive5.com/sintax/silva_18s_v123.fa.gz"
 assignTaxonomy:
-  minBoot: 50
+  minBoot: 0
   outputBootstraps: True
-  tryRC: True
+  tryRC: False
   taxdb:
     #RDP: https://zenodo.org/record/4310151/files/rdp_train_set_18.fa.gz?download=1
     #GTDB: https://zenodo.org/record/2541239/files/GTDB_bac-arc_ssu_r86.fa.gz?download=1
