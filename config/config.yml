@@ -15,7 +15,7 @@ vsearch:
   16S: "https://www.drive5.com/sintax/rdp_16s_v18.fa.gz"
   18S: "https://www.drive5.com/sintax/silva_18s_v123.fa.gz"
 assignTaxonomy:
-  minBoot: 100
+  minBoot: 50
   outputBootstraps: True
   tryRC: True
   taxdb:
