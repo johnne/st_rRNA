@@ -12,6 +12,7 @@ UMI:
 assignTaxonomy:
   minBoot: 100
   outputBootstraps: True
+  tryRC: True
   taxdb:
     #RDP: https://zenodo.org/record/4310151/files/rdp_train_set_18.fa.gz?download=1
     #GTDB: https://zenodo.org/record/2541239/files/GTDB_bac-arc_ssu_r86.fa.gz?download=1

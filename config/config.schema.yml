@@ -22,6 +22,7 @@ properties:
     default:
       minBoot: 100
       outputBootstraps: True
+      tryRC: True
     properties:
       database:
         type: object
