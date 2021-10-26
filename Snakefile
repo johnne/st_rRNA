@@ -235,7 +235,8 @@ rule assign_taxonomy:
         "results/logs/assignTaxonomy.{sample}.{subunit}.log"
     params:
         minBoot = config["assignTaxonomy"]["minBoot"],
-        outputBootstraps = config["assignTaxonomy"]["outputBootstraps"]
+        outputBootstraps = config["assignTaxonomy"]["outputBootstraps"],
+        tryRC = config["assignTaxonomy"]["tryRC"]
     conda: "envs/dada2.yml"
     resources:
         runtime = lambda wildcards, attempt: attempt**2*60*4

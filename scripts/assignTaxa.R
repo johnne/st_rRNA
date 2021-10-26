@@ -9,13 +9,14 @@ taxdf_file <- snakemake@output$taxdf
 bootdf_file <- snakemake@output$bootdf
 refFasta <- snakemake@input$refFasta
 minBoot <- snakemake@params$minboot
+tryRC <- snakemake@params$tryRC
 outputBootstraps <- snakemake@params$outputBootstraps
 threads <- snakemake@threads
 
 library(dada2)
 set.seed(100)
 taxonomy <- assignTaxonomy(seqs=seqs, refFasta=refFasta, minBoot=minBoot,
-                           outputBootstraps=outputBootstraps,
+                           outputBootstraps=outputBootstraps, tryRC=tryRC,
                            multithread=threads, verbose=TRUE)
 df <- as.data.frame(taxonomy)
 rownames(df) <- names(dimnames(taxonomy$tax)[[1]])
