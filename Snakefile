@@ -205,20 +205,46 @@ rule multiqc:
         rm {params.file_list}
         """
 
-rule download_train_set:
+rule download_taxref:
     """
     Downloads a DADA2-ready train set for use with the assignTaxonomy function
     """
     output:
-        "resources/DADA2/{subunit}.train.fasta"
+        "resources/DADA2/{subunit}.assignTaxonomy.fasta"
     log:
-        "results/logs/DADA2/download.{subunit}.train.log"
+        "results/logs/DADA2/download.{subunit}.assignTaxonomy.log"
     params:
         url=lambda wildcards: config["assignTaxonomy"]["taxdb"][wildcards.subunit]
     shell:
         """
         curl -L -o {output[0]}.gz {params.url} > {log} 2>&1
         gunzip {output[0]}.gz
+        rm {output[0]}.gz
+        """
+
+def postprocess(wildcards):
+    if wildcards.subunit == "18S":
+        s = " | sed '/^>/s/>\([^;]*\);.*,s:\(.*\)/>\\1 \\2/' | sed 's/_/ /g' | sed 's/ \([A-Z]\) /_\\1 /' > "
+    else:
+        s = " > "
+    return s
+
+rule download_speciesref:
+    """
+    Downloads a DADA2-ready train set for use with addSpecies function
+    """
+    output:
+        "resources/DADA2/{subunit}.addSpecies.fasta"
+    log:
+        "results/DADA2/download.{subunit}.addSpecies.log"
+    params:
+        url = lambda wildcards: config["assignTaxonomy"]["speciesdb"][wildcards.subunit],
+        postprocess = lambda wildcards: postprocess(wildcards)
+    shell:
+        """
+        curl -L -o {output[0]}.gz {params.url} > {log} 2>&1
+        gunzip -c {output[0]}.gz {params.postprocess} {output[0]}
+        rm {output[0]}.gz
         """
 
 rule assign_taxonomy:
@@ -227,7 +253,8 @@ rule assign_taxonomy:
     """
     input:
         seqs = "results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz",
-        refFasta = "resources/DADA2/{subunit}.train.fasta"
+        refFasta = "resources/DADA2/{subunit}.assignTaxonomy.fasta",
+        spFasta = "resources/DADA2/{subunit}.addSpecies.fasta"
     output:
         taxdf = report("results/taxonomy/{sample}.{subunit}.assignTaxonomy.tsv"),
         bootdf = "results/taxonomy/{sample}.{subunit}.assignTaxonomy.bootstrap.tsv"
