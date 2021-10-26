@@ -17,6 +17,22 @@ properties:
       - "18S"
     items:
       enum: ["16S", "18S"]
+  vsearch:
+    type: object
+    default:
+      cutoff: 0.0
+      16S: "https://www.drive5.com/sintax/rdp_16s_v18.fa.gz"
+      18S: "https://www.drive5.com/sintax/silva_18s_v123.fa.gz"
+    properties:
+      cutoff:
+        type: number
+        description: "Sintax cutoff"
+      16S:
+        type: string
+        description: "URL to sintax 16S db"
+      18S:
+        type: string
+        description: "URL to sintax 18S db"
   assignTaxonomy:
     type: object
     default:
