@@ -267,6 +267,8 @@ rule vsearch:
         "results/logs/vsearch/{sample}.{subunit}.log"
     params:
         cutoff = config["vsearch"]["cutoff"]
+    resources:
+        runtime = lambda wildcards, attempt: attempt ** 2 * 60
     conda: "envs/vsearch.yml"
     threads: 10
     shell:
