@@ -77,7 +77,7 @@ def write_mapfile(f, barcode, sampled_reads, read_to_umi):
     with open(f, 'w') as fhout:
         for read in sampled_reads:
             umi = read_to_umi[read.id]
-            fhout.write(f"{read_id}\t{umi}{b}\n")
+            fhout.write(f"{read.id}\t{umi}{b}\n")
 
 
 def write_read_ids(sampled_reads):
