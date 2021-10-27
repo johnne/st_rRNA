@@ -5,7 +5,9 @@ localrules:
     multiqc,
     report,
     download_sortmerna_db,
-    download_train_set,
+    download_taxref,
+    download_vsearch,
+    download_speciesref,
     extract_R1,
     sample,
     gather_spots
@@ -219,7 +221,6 @@ rule download_taxref:
         """
         curl -L -o {output[0]}.gz {params.url} > {log} 2>&1
         gunzip {output[0]}.gz
-        rm {output[0]}.gz
         """
 
 def postprocess(wildcards):
