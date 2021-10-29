@@ -8,6 +8,7 @@ seqs <- snakemake@input$seqs
 taxdf_file <- snakemake@output$taxdf
 bootdf_file <- snakemake@output$bootdf
 refFasta <- snakemake@input$refFasta
+spFasta <- snakemake@input$spFasta
 minBoot <- snakemake@params$minboot
 tryRC <- snakemake@params$tryRC
 outputBootstraps <- snakemake@params$outputBootstraps
@@ -19,6 +20,8 @@ taxonomy <- assignTaxonomy(seqs=seqs, refFasta=refFasta, minBoot=minBoot,
                            outputBootstraps=outputBootstraps, tryRC=tryRC,
                            multithread=threads, verbose=TRUE)
 df <- as.data.frame(taxonomy)
+# Add species
+df <- addSpecies(df, spFasta)
 rownames(df) <- names(dimnames(taxonomy$tax)[[1]])
 taxdf <- df[, grepl("tax.", colnames(df))]
 colnames(taxdf) <- gsub("tax.", "", colnames(taxdf))
