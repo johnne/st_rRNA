@@ -99,7 +99,7 @@ rule extract_R1:
     """
     input:
         R1 = lambda wildcards: samples[wildcards.sample]["R1"],
-        R2 = "results/rRNA/{subunit}/{sample}.R2.rRNA.fastq.gz"
+        R2 = rules.sortmerna.output
     output:
         R1 = "results/rRNA/{subunit}/{sample}.R1.rRNA.fastq.gz"
     log:
@@ -124,8 +124,8 @@ rule sample_spots:
     3. Samples X reads per UMI cluster
     """
     input:
-        R1 = "results/rRNA/{subunit}/{sample}.R1.rRNA.fastq.gz",
-        R2 = "results/rRNA/{subunit}/{sample}.R2.rRNA.fastq.gz"
+        R1 = rules.extract_R1.output,
+        R2 = rules.sortmerna.output
     output:
         R2 = temp("results/rRNA/{subunit}/spots/{barcode}/{sample}.R2.rRNA.subsampled.fastq.gz"),
         f = temp("results/rRNA/{subunit}/spots/{barcode}/{sample}.map.tsv")
@@ -248,6 +248,20 @@ rule download_speciesref:
         rm {output[0]}.gz
         """
 
+rule filter_species_fasta:
+    """
+    Removes sequences containing non DNA characters
+    """
+    input:
+        "resources/DADA2/{subunit}.addSpecies.fasta"
+    output:
+        "resources/DADA2/{subunit}.addSpecies.filtered.fasta"
+    log:
+        "resources/DADA2/{subunit}.filter_species.log"
+    conda: "envs/seqkit.yml"
+    script:
+        "scripts/filter_species_fasta.py"
+
 rule assign_taxonomy:
     """
     Assigns taxonomy to the R2 reads identified as rRNA by sortmerna 
@@ -255,7 +269,7 @@ rule assign_taxonomy:
     input:
         seqs = "results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz",
         refFasta = "resources/DADA2/{subunit}.assignTaxonomy.fasta",
-        spFasta = "resources/DADA2/{subunit}.addSpecies.fasta"
+        spFasta = "resources/DADA2/{subunit}.addSpecies.filtered.fasta"
     output:
         taxdf = report("results/taxonomy/{sample}.{subunit}.assignTaxonomy.tsv"),
         bootdf = "results/taxonomy/{sample}.{subunit}.assignTaxonomy.bootstrap.tsv"
