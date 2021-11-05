@@ -10,7 +10,9 @@ localrules:
     download_speciesref,
     extract_R1,
     sample,
-    gather_spots
+    gather_spots,
+    filter_species_fasta,
+    filter_seqs
 
 configfile: "config/config.yml"
 rRNA = {"16S": ["silva-arc-16s-id95.fasta", "silva-bac-16s-id90.fasta"],
