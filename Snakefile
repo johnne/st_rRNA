@@ -278,7 +278,7 @@ rule filter_species_fasta:
     params:
         seq_type = "fasta"
     script:
-        "scripts/filter_species_fasta.py"
+        "scripts/filter_seqs.py"
 
 rule assign_taxonomy:
     """
