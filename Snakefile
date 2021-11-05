@@ -176,10 +176,24 @@ rule gather_spots:
         mv {params.tmp2} {output[1]}
         """
 
+rule filter_seqs:
+    input:
+        "results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz"
+    output:
+        "results/rRNA/{subunit}/{sample}.sampled.filtered.R2.rRNA.fastq.gz"
+    log:
+        "results/logs/{subunit}/{sample}.filter_nonDNA.log"
+    conda: "envs/seqkit.yml"
+    params:
+        seq_type = "fastq"
+    script: "scripts/filter_seqs.py"
+
+
+
 ## Sample target rule
 rule sample:
     input:
-        expand("results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz",
+        expand("results/rRNA/{subunit}/{sample}.sampled.filtered.R2.rRNA.fastq.gz",
             subunit = config["subunits"], sample = samples.keys()),
         expand("results/rRNA/{subunit}/{sample}.map.tsv",
             subunit = config["subunits"], sample = samples.keys())
@@ -259,6 +273,8 @@ rule filter_species_fasta:
     log:
         "resources/DADA2/{subunit}.filter_species.log"
     conda: "envs/seqkit.yml"
+    params:
+        seq_type = "fasta"
     script:
         "scripts/filter_species_fasta.py"
 
@@ -267,7 +283,7 @@ rule assign_taxonomy:
     Assigns taxonomy to the R2 reads identified as rRNA by sortmerna 
     """
     input:
-        seqs = "results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz",
+        seqs = "results/rRNA/{subunit}/{sample}.sampled.filtered.R2.rRNA.fastq.gz",
         refFasta = "resources/DADA2/{subunit}.assignTaxonomy.fasta",
         spFasta = "resources/DADA2/{subunit}.addSpecies.filtered.fasta"
     output:
