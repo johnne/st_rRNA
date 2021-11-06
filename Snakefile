@@ -239,6 +239,18 @@ rule download_taxref:
         gunzip {output[0]}.gz
         """
 
+rule reformat_taxref:
+    input:
+        "resources/DADA2/{subunit}.assignTaxonomy.fasta"
+    output:
+        "resources/DADA2/{subunit}.assignTaxonomy.reformat.fasta"
+    log:
+        "results/logs/reformat_taxref.log"
+    conda: "envs/seqkit.yml"
+    script:
+        "scripts/reformat_taxref.py"
+
+
 def postprocess(wildcards):
     if wildcards.subunit == "18S":
         s = " | sed '/^>/s/>\([^;]*\);.*,s:\(.*\)/>\\1 \\2/' | sed 's/_/ /g' | sed 's/ \([A-Z]\) /_\\1 /' > "
@@ -286,7 +298,7 @@ rule assign_taxonomy:
     """
     input:
         seqs = "results/rRNA/{subunit}/{sample}.sampled.filtered.R2.rRNA.fastq.gz",
-        refFasta = "resources/DADA2/{subunit}.assignTaxonomy.fasta",
+        refFasta = "resources/DADA2/{subunit}.assignTaxonomy.reformat.fasta",
         spFasta = "resources/DADA2/{subunit}.addSpecies.filtered.fasta"
     output:
         taxdf = report("results/taxonomy/{sample}.{subunit}.assignTaxonomy.tsv"),
@@ -336,3 +348,14 @@ rule vsearch:
         vsearch --threads {threads} --sintax {input.seqs} --db {input.db} \
             --sintax_cutoff {params.cutoff} --tabbedout {output[0]} > {log} 2>&1 
         """
+
+rule spot_taxonomy:
+    input:
+        "results/taxonomy/{sample}.{subunit}.{taxtool}.tsv",
+        "results/rRNA/{subunit}/{sample}.map.tsv"
+    output:
+        "results/taxonomy/{sample}.{subunit}.{taxtool}.spot_taxonomy.tsv"
+    run:
+        taxdf = pd.read_csv("results/taxonomy/Baltic_test.16S.assignTaxonomy.tsv", sep="\t", header=0, index_col=0)
+        ranks = list(taxdf.columns)
+        mapdf = pd.read_csv("results/rRNA/16S/Baltic_test.map.tsv", sep="\t", index_col=0, header=0, names=["read_id", "umi", "spot"])
