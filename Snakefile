@@ -245,7 +245,7 @@ rule reformat_taxref:
     output:
         "resources/DADA2/{subunit}.assignTaxonomy.reformat.fasta"
     log:
-        "results/logs/reformat_taxref.log"
+        "results/logs/{subunit}.reformat_taxref.log"
     conda: "envs/seqkit.yml"
     script:
         "scripts/reformat_taxref.py"
