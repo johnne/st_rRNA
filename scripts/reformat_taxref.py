@@ -10,6 +10,8 @@ def main(sm):
             if len(items) == 7 and items[0] == items[1]:
                 recid = ";".join(items[1:])
                 fhout.write(f">{recid}\n{record.seq}\n")
+            else:
+                fhout.write(f">{record.id}\n{record.seq}\n")
 
 
 if __name__ == "__main__":
