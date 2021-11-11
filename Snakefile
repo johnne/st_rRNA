@@ -26,6 +26,8 @@ barcodes = read_barcodes(config["barcode_list"])
 
 wildcard_constraints:
     barcode = "({})".format("|".join(barcodes.keys())),
+    subunit = "16S|18S",
+    sample = "({})".format("|".join(samples.keys())),
 
 def taxinput(config, samples):
     input = []
@@ -247,6 +249,8 @@ rule reformat_taxref:
         "resources/DADA2/{subunit}.assignTaxonomy.reformat.fasta"
     log:
         "results/logs/{subunit}.reformat_taxref.log"
+    params:
+        num_ranks = lambda wildcards: len(config["assignTaxonomy"]["ranks"][wildcards.subunit])
     conda: "envs/seqkit.yml"
     script:
         "scripts/reformat_taxref.py"
@@ -352,11 +356,14 @@ rule vsearch:
 
 rule spot_taxonomy:
     input:
-        "results/taxonomy/{sample}.{subunit}.{taxtool}.tsv",
-        "results/rRNA/{subunit}/{sample}.map.tsv"
+        tax = "results/taxonomy/{sample}.{subunit}.assignTaxonomy.tsv",
+        boot = "results/taxonomy/{sample}.{subunit}.assignTaxonomy.bootstrap.tsv",
+        mapfile = "results/rRNA/{subunit}/{sample}.map.tsv"
     output:
         "results/taxonomy/{sample}.{subunit}.{taxtool}.spot_taxonomy.tsv"
     run:
-        taxdf = pd.read_csv("results/taxonomy/Baltic_test.16S.assignTaxonomy.tsv", sep="\t", header=0, index_col=0)
+        taxdf = pd.read_csv(input.tax, sep="\t", header=0, index_col=0)
+        bootdf = pd.read_csv(input.boot, sep="\t", header=0, index_col=0)
         ranks = list(taxdf.columns)
-        mapdf = pd.read_csv("results/rRNA/16S/Baltic_test.map.tsv", sep="\t", index_col=0, header=0, names=["read_id", "umi", "spot"])
+        mapdf = pd.read_csv(input.mapfile, sep="\t", index_col=0, header=0,
+            names=["read_id", "umi", "spot"])
