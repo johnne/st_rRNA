@@ -4,19 +4,21 @@ log <- file(snakemake@log[[1]], open="wt")
 sink(log)
 sink(log, type="message")
 
+subunit <- snakemake@wildcards$subunit
 seqs <- snakemake@input$seqs
 taxdf_file <- snakemake@output$taxdf
 bootdf_file <- snakemake@output$bootdf
 refFasta <- snakemake@input$refFasta
 spFasta <- snakemake@input$spFasta
-minBoot <- snakemake@params$minboot
+minBoot <- snakemake@params$minBoot
+taxLevels <- snakemake@params$taxLevels
 tryRC <- snakemake@params$tryRC
 outputBootstraps <- snakemake@params$outputBootstraps
 threads <- snakemake@threads
 
 library(dada2)
 set.seed(100)
-taxonomy <- assignTaxonomy(seqs=seqs, refFasta=refFasta, minBoot=minBoot,
+taxonomy <- assignTaxonomy(seqs=seqs, refFasta=refFasta, minBoot=minBoot, taxLevels=taxLevels,
                            outputBootstraps=outputBootstraps, tryRC=tryRC,
                            multithread=threads, verbose=TRUE)
 df <- as.data.frame(taxonomy)
@@ -26,7 +28,8 @@ sequences <- as.character(dimnames(taxonomy$tax)[[1]])
 seqids <- names(dimnames(taxonomy$tax)[[1]])
 seqidmap <- as.data.frame(seqids, row.names=sequences)
 # Add species
-df <- addSpecies(df, spFasta)
+df <- addSpecies(df, spFasta, allowMultiple=TRUE)
+colnames(df) <- gsub("Species", "tax.species", colnames(df))
 rownames(df) <- seqidmap[rownames(df),]
 taxdf <- df[, grepl("tax.", colnames(df))]
 colnames(taxdf) <- gsub("tax.", "", colnames(taxdf))

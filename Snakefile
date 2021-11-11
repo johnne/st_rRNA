@@ -313,7 +313,8 @@ rule assign_taxonomy:
     params:
         minBoot = config["assignTaxonomy"]["minBoot"],
         outputBootstraps = config["assignTaxonomy"]["outputBootstraps"],
-        tryRC = config["assignTaxonomy"]["tryRC"]
+        tryRC = config["assignTaxonomy"]["tryRC"],
+        taxLevels = lambda wildcards: config["assignTaxonomy"]["ranks"][wildcards.subunit]
     conda: "envs/dada2.yml"
     resources:
         runtime = lambda wildcards, attempt: attempt**2*60*4

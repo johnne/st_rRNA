@@ -27,9 +27,16 @@ def main(sm):
             items = (record.id).split(";")
             if items[0] == items[1]:
                 items = items[1:]
-            recid = ";".join(items)
-            if len(items) == num_ranks:
-                fhout.write(f">{recid}\n{record.seq}\n")
+            if sm.wildcards.subunit == "16S":
+                if len(items) == num_ranks:
+                    recid = ";".join(items)
+                    fhout.write(f">{recid}\n{record.seq}\n")
+            elif sm.wildcards.subunit == "18S":
+                # Skip the last species level from the header
+                if len(items) == num_ranks+1:
+                    items.pop()
+                    recid = ";".join(items)
+                    fhout.write(f">{recid}\n{record.seq}\n")
 
 
 if __name__ == "__main__":
