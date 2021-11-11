@@ -24,3 +24,6 @@ assignTaxonomy:
   speciesdb:
     16S: "https://scilifelab.figshare.com/ndownloader/files/28624479"
     18S: "https://github.com/pr2database/pr2database/releases/download/v4.14.0/pr2_version_4.14.0_SSU_UTAX.fasta.gz"
+  ranks:
+    16S: ["superkingdom", "phylum", "class", "order", "family", "genus"]
+    18S: ["kingdom", "supergroup", "division", "class", "order", "family", "genus", "species"]
