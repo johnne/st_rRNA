@@ -29,19 +29,11 @@ wildcard_constraints:
     subunit = "16S|18S",
     sample = "({})".format("|".join(samples.keys())),
 
-def taxinput(config, samples):
-    input = []
-    if config["taxtool"] == "vsearch":
-        input += expand("results/taxonomy/{sample}.{subunit}.vsearch.tsv",
-                        sample = samples.keys(), subunit = config["subunits"])
-    else:
-        input += expand("results/taxonomy/{sample}.{subunit}.assignTaxonomy.tsv",
-                        sample = samples.keys(), subunit = config["subunits"])
-    return input
-
 rule report:
     input:
-        taxinput(config, samples),
+        expand("results/taxonomy/{sample}.{subunit}.{taxtool}.spot_taxonomy.tsv",
+            sample = samples.keys(), subunit = config["subunits"],
+            taxtool = config["taxtool"]),
         "results/report/sample_report.html"
 
 rule download_sortmerna_db:
@@ -362,9 +354,27 @@ rule spot_taxonomy:
         mapfile = "results/rRNA/{subunit}/{sample}.map.tsv"
     output:
         "results/taxonomy/{sample}.{subunit}.{taxtool}.spot_taxonomy.tsv"
+    params:
+        filter_rank = "genus",
+        minBoot = 75
     run:
         taxdf = pd.read_csv(input.tax, sep="\t", header=0, index_col=0)
         bootdf = pd.read_csv(input.boot, sep="\t", header=0, index_col=0)
+        bootdf = bootdf.loc[bootdf[params.filter_rank] >= params.minBoot]
+        reads = set(bootdf.index).intersection(taxdf.index)
+        taxdf = taxdf.loc[reads]
         ranks = list(taxdf.columns)
         mapdf = pd.read_csv(input.mapfile, sep="\t", index_col=0, header=0,
             names=["read_id", "umi", "spot"])
+        spot_taxdf = pd.merge(taxdf, mapdf.drop("umi", axis=1), how="inner", left_index=True,
+            right_index=True)
+        spot_taxdf.fillna("Unassigned", inplace=True)
+        # add taxonomy column
+        spot_taxdf["taxonomy"] = spot_taxdf[ranks].agg(";".join,axis=1)
+        # groupby and count
+        spot_taxonomy_counts = spot_taxdf.groupby(["spot", "taxonomy"]).count().loc[:, ranks[0]]
+        spot_taxonomy_counts = pd.DataFrame(spot_taxonomy_counts.reset_index().rename(columns={ranks[0]: 'n'}))
+        spot_taxonomy_counts = pd.pivot_table(spot_taxonomy_counts, columns="spot", index="taxonomy")
+        spot_taxonomy_counts = spot_taxonomy_counts["n"].fillna(0)
+        index = list(spot_taxonomy_counts.sum(axis=1).sort_values(ascending=False).index)
+        spot_taxonomy_counts.loc[index].to_csv(output[0], sep="\t")
