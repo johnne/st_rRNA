@@ -92,8 +92,21 @@ def write_read_ids(sampled_reads):
             fhout.write(f"{read.id}\n")
 
 
+def write_stats(umi_dict, statsfile, barcode):
+    if barcode:
+        barcode_string = f"\t{barcode}\n"
+    else:
+        barcode_string = "\n"
+    with open(statsfile, 'w') as fhout:
+        for umi, reads in umi_dict.items():
+            fhout.write(f"{umi}\t{len(reads)}{barcode_string}")
+
+
+
 def main(args):
     umi_dict = read_fastq(args.R1, args.start, args.stop)
+    if args.stats:
+        write_stats(umi_dict, args.stats, args.barcode)
     umi_reps = get_umi_rep(umi_dict)
     sampled_reads, read_to_umi = sample_spot(umi_reps, args.num_reads)
     write_read_ids(sampled_reads)
@@ -104,6 +117,8 @@ def main(args):
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("R1", help="Read 1 file")
+    parser.add_argument("--stats",
+                        help="Write number of reads per UMI for spot")
     parser.add_argument("--num_reads", type=int, default=100,
                         help="Number of reads to sample from a spot")
     parser.add_argument("--start", type=int, default=18,

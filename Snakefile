@@ -126,7 +126,8 @@ rule sample_spots:
         R2 = rules.sortmerna.output
     output:
         R2 = temp("results/rRNA/{subunit}/spots/{barcode}/{sample}.R2.rRNA.subsampled.fastq.gz"),
-        f = temp("results/rRNA/{subunit}/spots/{barcode}/{sample}.map.tsv")
+        f = temp("results/rRNA/{subunit}/spots/{barcode}/{sample}.map.tsv"),
+        stats = temp("results/rRNA/{subunit}/spots/{barcode}/{sample}.stats")
     log:
         "results/logs/{subunit}/{sample}.sample_spots.{barcode}.log"
     params:
@@ -146,8 +147,8 @@ rule sample_spots:
         if [ -z ${{TMPDIR+x}} ]; then TMPDIR=temp; fi
         mkdir -p {params.tmpdir}
         seqkit grep -m 0 -P -r -s -p "^{wildcards.barcode}" {input.R1} > {params.R1}
-        python scripts/sample_spot.py {params.R1} --num_reads {params.X} \
-            --start {params.umi_start} --stop {params.umi_stop} \
+        python scripts/sample_spot.py {params.R1} --stats {output.stats} \
+            --num_reads {params.X} --start {params.umi_start} --stop {params.umi_stop} \
             --barcode {wildcards.barcode} --mapfile {output.f} > {params.ids}
         seqkit grep -f {params.ids} {input.R2} | gzip -c > {params.R2}
         mv {params.R2} {output.R2}
@@ -158,13 +159,17 @@ rule gather_spots:
         fq = expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.R2.rRNA.subsampled.fastq.gz",
             barcode = barcodes.keys()),
         tsv = expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.map.tsv",
+            barcode = barcodes.keys()),
+        stats = expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.stats",
             barcode = barcodes.keys())
     output:
         "results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz",
-        "results/rRNA/{subunit}/{sample}.map.tsv"
+        "results/rRNA/{subunit}/{sample}.map.tsv",
+        "results/rRNA/{subunit}/{sample}.stats.tsv"
     params:
         tmp1 = "$TMPDIR/{subunit}.{sample}.sampled.R2.rRNA.fastq.gz",
-        tmp2 = "$TMPDIR/{subunit}.{sample}.mapfile.tsv"
+        tmp2 = "$TMPDIR/{subunit}.{sample}.mapfile.tsv",
+        tmp3 = "$TMPDIR/{subunit}.{sample}.stats.tsv"
     shell:
         """
         if [ -z ${{TMPDIR+x}} ]; then TMPDIR=temp; fi
@@ -172,6 +177,8 @@ rule gather_spots:
         mv {params.tmp1} {output[0]}
         cat {input.tsv} > {params.tmp2}
         mv {params.tmp2} {output[1]}
+        cat {input.stats} > {params.tmp3}
+        mv {params.tmp3} {output[2]}
         """
 
 rule filter_seqs:
