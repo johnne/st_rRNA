@@ -362,7 +362,7 @@ rule spot_taxonomy:
     run:
         # Read barcodes
         barcodes = pd.read_csv(input.barcodes, sep="\t", index_col=0, header=0,
-        dtype=str)
+        dtype=str, names=["barcode", "x", "y"])
         # Make coord column and create renaming dictionary
         barcodes["coord"] = barcodes[["x", "y"]].agg("x".join,axis=1)
         barcodes = barcodes.drop(["x","y"], axis=1).to_dict()["coord"]
@@ -387,6 +387,5 @@ rule spot_taxonomy:
         spot_taxonomy_counts = spot_taxonomy_counts["n"].fillna(0)
         index = list(spot_taxonomy_counts.sum(axis=1).sort_values(ascending=False).index)
         # Transpose dataframe and change index names
-        spot_taxonomy_counts = spot_taxonomy_counts.T
-        spot_taxonomy_counts = spot_taxonomy_counts.rename(index=barcodes)
-        spot_taxonomy_counts.loc[index].to_csv(output[0], sep="\t")
+        spot_taxonomy_counts = spot_taxonomy_counts.rename(columns=barcodes)
+        spot_taxonomy_counts.loc[index].T.to_csv(output[0], sep="\t")
