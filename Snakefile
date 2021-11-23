@@ -352,13 +352,21 @@ rule spot_taxonomy:
     input:
         tax = "results/taxonomy/{sample}.{subunit}.assignTaxonomy.tsv",
         boot = "results/taxonomy/{sample}.{subunit}.assignTaxonomy.bootstrap.tsv",
-        mapfile = "results/rRNA/{subunit}/{sample}.map.tsv"
+        mapfile = "results/rRNA/{subunit}/{sample}.map.tsv",
+        barcodes = config["barcode_list"]
     output:
         "results/taxonomy/{sample}.{subunit}.{taxtool}.spot_taxonomy.tsv"
     params:
         filter_rank = "genus",
         minBoot = 75
     run:
+        # Read barcodes
+        barcodes = pd.read_csv(input.barcodes, sep="\t", index_col=0, header=0,
+        dtype=str)
+        # Make coord column and create renaming dictionary
+        barcodes["coord"] = barcodes[["x", "y"]].agg("x".join,axis=1)
+        barcodes = barcodes.drop(["x","y"], axis=1).to_dict()["coord"]
+
         taxdf = pd.read_csv(input.tax, sep="\t", header=0, index_col=0)
         bootdf = pd.read_csv(input.boot, sep="\t", header=0, index_col=0)
         bootdf = bootdf.loc[bootdf[params.filter_rank] >= params.minBoot]
@@ -378,4 +386,7 @@ rule spot_taxonomy:
         spot_taxonomy_counts = pd.pivot_table(spot_taxonomy_counts, columns="spot", index="taxonomy")
         spot_taxonomy_counts = spot_taxonomy_counts["n"].fillna(0)
         index = list(spot_taxonomy_counts.sum(axis=1).sort_values(ascending=False).index)
+        # Transpose dataframe and change index names
+        spot_taxonomy_counts = spot_taxonomy_counts.T
+        spot_taxonomy_counts = spot_taxonomy_counts.rename(index=barcodes)
         spot_taxonomy_counts.loc[index].to_csv(output[0], sep="\t")
