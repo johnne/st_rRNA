@@ -9,6 +9,13 @@ properties:
     type: string
     description: "Path to a sample sheet"
     default: "config/samples.tsv"
+  sortmerna:
+    type: object
+    properties:
+      evalue:
+        type: numeric
+        description: "E-value threshold for sortmerna"
+        default: 1e-10
   subunits:
     type: array
     description: "Subunits to run analysis for"

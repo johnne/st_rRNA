@@ -68,6 +68,7 @@ rule sortmerna:
         runlog="results/logs/rRNA/{subunit}/{sample}.log",
         reportlog="results/rRNA/{subunit}/{sample}.log"
     params:
+        evalue = config["sortmerna"]["evalue"],
         workdir = "$TMPDIR/rRNA/{subunit}.{sample}.wd",
         R2 = "$TMPDIR/rRNA/{subunit}.{sample}.wd/R2.fastq",
         outdir = lambda wildcards, output: os.path.dirname(output[0]),
@@ -81,7 +82,7 @@ rule sortmerna:
         rm -rf {params.workdir}
         mkdir -p {params.workdir}
         gunzip -c {input.R2} > {params.R2}
-        sortmerna --threads {threads} --workdir {params.workdir} --fastx \
+        sortmerna -e {params.evalue} --threads {threads} --workdir {params.workdir} --fastx \
             --reads {params.R2} {params.ref_string} \
             --aligned {params.workdir}/{wildcards.sample}.R2.rRNA > {log.runlog} 2>&1
         rm {params.R2}
@@ -192,8 +193,6 @@ rule filter_seqs:
     params:
         seq_type = "fastq"
     script: "scripts/filter_seqs.py"
-
-
 
 ## Sample target rule
 rule sample:
@@ -357,15 +356,20 @@ rule vsearch:
 
 rule spot_taxonomy:
     input:
-        tax = "results/taxonomy/{sample}.{subunit}.assignTaxonomy.tsv",
-        boot = "results/taxonomy/{sample}.{subunit}.assignTaxonomy.bootstrap.tsv",
-        mapfile = "results/rRNA/{subunit}/{sample}.map.tsv",
+        tax = expand("results/taxonomy/{{sample}}.{subunit}.assignTaxonomy.tsv",
+            subunit = config["subunits"]),
+        boot = expand("results/taxonomy/{{sample}}.{subunit}.assignTaxonomy.bootstrap.tsv",
+            subunit = config["subunits"]),
+        mapfile = expand("results/rRNA/{subunit}/{{sample}}.map.tsv",
+            subunit = config["subunits"]),
         barcodes = config["barcode_list"]
     output:
-        "results/taxonomy/{sample}.{subunit}.{taxtool}.spot_taxonomy.tsv"
+        "results/taxonomy/{sample}.16S.assignTaxonomy.spot_taxonomy.tsv",
+        "results/taxonomy/{sample}.18S.assignTaxonomy.spot_taxonomy.tsv"
     params:
         filter_rank = "genus",
-        minBoot = 75
+        minBoot = 75,
+        subunits = config["subunits"]
     run:
         # Read barcodes
         barcodes = pd.read_csv(input.barcodes, sep="\t", index_col=0, header=0,

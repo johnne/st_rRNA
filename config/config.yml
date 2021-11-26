@@ -1,6 +1,8 @@
 sample_list: "config/samples.tsv"
 barcode_list: "config/barcodes.tsv"
 # Subunits to analyse, currently only 16S and 18S are supported
+sortmerna:
+  evalue: 1e-10
 subunits:
   - "16S"
   - "18S"
