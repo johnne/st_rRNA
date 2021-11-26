@@ -13,7 +13,7 @@ properties:
     type: object
     properties:
       evalue:
-        type: numeric
+        type: number
         description: "E-value threshold for sortmerna"
         default: 1e-10
   subunits:
