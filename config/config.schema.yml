@@ -15,7 +15,7 @@ properties:
       evalue:
         type: number
         description: "E-value threshold for sortmerna"
-        default: 1e-10
+        default: 0.0000000001
   subunits:
     type: array
     description: "Subunits to run analysis for"
