@@ -2,12 +2,12 @@ sample_list: "config/samples.tsv"
 barcode_list: "config/barcodes.tsv"
 # Subunits to analyse, currently only 16S and 18S are supported
 sortmerna:
-  evalue: 1e-10
+  evalue: 0.0000000001
 subunits:
   - "16S"
   - "18S"
 # Sequences per spots
-seqs_per_spot: 100
+seqs_per_spot: 200
 UMI:
   start: 18
   stop: 25
@@ -20,6 +20,7 @@ assignTaxonomy:
   minBoot: 0
   outputBootstraps: True
   tryRC: False
+  threads: 20
   taxdb:
     16S: "https://scilifelab.figshare.com/ndownloader/files/28624482"
     18S: "https://github.com/pr2database/pr2database/releases/download/v4.14.0/pr2_version_4.14.0_SSU_dada2.fasta.gz"
