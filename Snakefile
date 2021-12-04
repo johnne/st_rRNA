@@ -316,8 +316,8 @@ rule assign_taxonomy:
         taxLevels = lambda wildcards: config["assignTaxonomy"]["ranks"][wildcards.subunit]
     conda: "envs/dada2.yml"
     resources:
-        runtime = lambda wildcards, attempt: attempt**2*60*4
-    threads: 20
+        runtime = lambda wildcards, attempt: attempt**2*60*10
+    threads: config["assignTaxonomy"]["threads"]
     script:
         "scripts/assignTaxa.R"
 
