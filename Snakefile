@@ -155,32 +155,62 @@ rule sample_spots:
         mv {params.R2} {output.R2}
         """
 
+rule assignTaxonomySpot:
+    input:
+        refFasta = "resources/DADA2/{subunit}.assignTaxonomy.reformat.fasta",
+        spFasta = "resources/DADA2/{subunit}.addSpecies.filtered.fasta",
+        seqs = rules.sample_spots.output.R2
+    output:
+        tax = "results/rRNA/{subunit}/spots/{barcode}/{sample}.assignTaxonomy.tsv",
+        boot = "results/rRNA/{subunit}/spots/{barcode}/{sample}.assignTaxonomy.bootstrap.tsv"
+    log:
+        "results/rRNA/{subunit}/spots/{barcode}/{sample}.assignTaxonomy.log"
+    params:
+        minBoot = config["assignTaxonomy"]["minBoot"],
+        outputBootstraps=config["assignTaxonomy"]["outputBootstraps"],
+        tryRC=config["assignTaxonomy"]["tryRC"],
+        taxLevels=lambda wildcards: config["assignTaxonomy"]["ranks"][
+            wildcards.subunit]
+    conda: "envs/dada2.yml"
+    resources:
+        runtime = lambda wildcards,attempt: attempt ** 2 * 60 * 10
+    threads: config["assignTaxonomy"]["threads"]
+    script:
+        "scripts/assignTaxa.R"
+
+
+def concat_files(files, outfile):
+    import shutil
+    with open(outfile,'wb') as fhout:
+        for f in files:
+            with open(f,'rb') as fhin:
+                shutil.copyfileobj(fhin,fhout)
+
+
 rule gather_spots:
     input:
-        fq = expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.R2.rRNA.subsampled.fastq.gz",
+        tax = expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.assignTaxonomy.tsv",
             barcode = barcodes.keys()),
         tsv = expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.map.tsv",
             barcode = barcodes.keys()),
         stats = expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.stats",
             barcode = barcodes.keys())
     output:
-        "results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz",
-        "results/rRNA/{subunit}/{sample}.map.tsv",
-        "results/rRNA/{subunit}/{sample}.stats.tsv"
+        tax = "results/rRNA/{subunit}/{sample}.assignTaxonomy.tsv",
+        tsv = "results/rRNA/{subunit}/{sample}.map.tsv",
+        stats = "results/rRNA/{subunit}/{sample}.stats.tsv"
     params:
         tmp1 = "$TMPDIR/{subunit}.{sample}.sampled.R2.rRNA.fastq.gz",
         tmp2 = "$TMPDIR/{subunit}.{sample}.mapfile.tsv",
         tmp3 = "$TMPDIR/{subunit}.{sample}.stats.tsv"
-    shell:
-        """
-        if [ -z ${{TMPDIR+x}} ]; then TMPDIR=temp; fi
-        cat {input.fq} > {params.tmp1}
-        mv {params.tmp1} {output[0]}
-        cat {input.tsv} > {params.tmp2}
-        mv {params.tmp2} {output[1]}
-        cat {input.stats} > {params.tmp3}
-        mv {params.tmp3} {output[2]}
-        """
+    run:
+        concat_files(input.tsv, output.tsv)
+        concat_files(input.stats, output.stats)
+        df = pd.DataFrame()
+        for f in input.tax:
+            _df = pd.read_csv(f, sep="\t", index_col=0, header=0)
+            df = pd.concat([df, _df])
+        df.to_csv(output.tax, sep="\t")
 
 rule filter_seqs:
     input:
