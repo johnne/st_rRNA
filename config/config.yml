@@ -7,7 +7,7 @@ subunits:
   - "16S"
   - "18S"
 # Sequences per spots
-seqs_per_spot: 200
+seqs_per_spot: 500
 UMI:
   start: 18
   stop: 25
