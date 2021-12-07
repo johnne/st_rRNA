@@ -1,5 +1,6 @@
 import os
 from snakemake.utils import validate
+
 include: "scripts/common.py"
 localrules:
     multiqc,
@@ -62,7 +63,7 @@ rule sortmerna:
         R2 = lambda wildcards: samples[wildcards.sample]["R2"],
         db = rRNA_fasta
     output:
-        "results/rRNA/{subunit}/{sample}.R2.rRNA.fastq.gz"
+        "results/rRNA/{subunit}/{sample}.R2.fastq.gz"
     conda: "envs/sortmerna.yml"
     log:
         runlog="results/logs/rRNA/{subunit}/{sample}.log",
@@ -70,6 +71,7 @@ rule sortmerna:
     params:
         evalue = config["sortmerna"]["evalue"],
         workdir = "$TMPDIR/rRNA/{subunit}.{sample}.wd",
+        aligned = "{sample}.R2",
         R2 = "$TMPDIR/rRNA/{subunit}.{sample}.wd/R2.fastq",
         outdir = lambda wildcards, output: os.path.dirname(output[0]),
         ref_string = lambda wildcards, input: " ".join([f"--ref {x}" for x in input.db])
@@ -84,11 +86,11 @@ rule sortmerna:
         gunzip -c {input.R2} > {params.R2}
         sortmerna -e {params.evalue} --threads {threads} --workdir {params.workdir} --fastx \
             --reads {params.R2} {params.ref_string} \
-            --aligned {params.workdir}/{wildcards.sample}.R2.rRNA > {log.runlog} 2>&1
+            --aligned {params.workdir}/{params.aligned} > {log.runlog} 2>&1
         rm {params.R2}
         gzip {params.workdir}/*.fastq
         mv {params.workdir}/*.gz {params.outdir}
-        mv {params.workdir}/{wildcards.sample}.R2.rRNA.log {log.reportlog}
+        mv {params.workdir}/{wildcards.sample}.R2.log {log.reportlog}
         rm -rf {params.workdir}
         """
 
@@ -100,7 +102,7 @@ rule extract_R1:
         R1 = lambda wildcards: samples[wildcards.sample]["R1"],
         R2 = rules.sortmerna.output
     output:
-        R1 = "results/rRNA/{subunit}/{sample}.R1.rRNA.fastq.gz"
+        R1 = "results/rRNA/{subunit}/{sample}.R1.fastq.gz"
     log:
         "results/logs/rRNA/{subunit}.{sample}.seqtk.log"
     params:
@@ -126,7 +128,7 @@ rule sample_spots:
         R1 = rules.extract_R1.output,
         R2 = rules.sortmerna.output
     output:
-        R2 = temp("results/rRNA/{subunit}/spots/{barcode}/{sample}.R2.rRNA.subsampled.fastq.gz"),
+        R2 = temp("results/rRNA/{subunit}/spots/{barcode}/{sample}.R2.subsampled.fastq.gz"),
         f = temp("results/rRNA/{subunit}/spots/{barcode}/{sample}.map.tsv"),
         stats = temp("results/rRNA/{subunit}/spots/{barcode}/{sample}.stats")
     log:
@@ -155,14 +157,32 @@ rule sample_spots:
         mv {params.R2} {output.R2}
         """
 
+rule filter_seqs:
+    """
+    Removes sequences with characters other than ["A","C","G","T"]
+    """
+    input:
+        rules.sample_spots.output.R2
+    output:
+        "results/rRNA/{subunit}/spots/{barcode}/{sample}.R2.subsampled.filtered.fastq.gz"
+    log:
+        "results/logs/{subunit}/{sample}.{barcode}.filter_nonDNA.log"
+    conda: "envs/seqkit.yml"
+    params:
+        seq_type = "fastq"
+    script: "scripts/filter_seqs.py"
+
 rule assignTaxonomySpot:
+    """
+    Runs assignTaxonomy on subsampled and filtered sequences for a spot
+    """
     input:
         refFasta = "resources/DADA2/{subunit}.assignTaxonomy.reformat.fasta",
         spFasta = "resources/DADA2/{subunit}.addSpecies.filtered.fasta",
-        seqs = rules.sample_spots.output.R2
+        seqs = rules.filter_seqs.output[0]
     output:
-        tax = "results/rRNA/{subunit}/spots/{barcode}/{sample}.assignTaxonomy.tsv",
-        boot = "results/rRNA/{subunit}/spots/{barcode}/{sample}.assignTaxonomy.bootstrap.tsv"
+        taxdf = "results/rRNA/{subunit}/spots/{barcode}/{sample}.assignTaxonomy.tsv",
+        bootdf = "results/rRNA/{subunit}/spots/{barcode}/{sample}.assignTaxonomy.bootstrap.tsv"
     log:
         "results/rRNA/{subunit}/spots/{barcode}/{sample}.assignTaxonomy.log"
     params:
@@ -186,10 +206,24 @@ def concat_files(files, outfile):
             with open(f,'rb') as fhin:
                 shutil.copyfileobj(fhin,fhout)
 
+def concat_df(files, outfile):
+    import pandas as pd
+    df = pd.DataFrame()
+    for f in files:
+        if os.stat(f).st_size==0:
+            continue
+        _df = pd.read_csv(f, sep="\t", index_col=0, header=0)
+        df = pd.concat([df, _df])
+    df.to_csv(outfile, sep="\t")
 
 rule gather_spots:
+    """
+    Concatenates spot files per subunit/sample
+    """
     input:
         tax = expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.assignTaxonomy.tsv",
+            barcode = barcodes.keys()),
+        boot = expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.assignTaxonomy.bootstrap.tsv",
             barcode = barcodes.keys()),
         tsv = expand("results/rRNA/{{subunit}}/spots/{barcode}/{{sample}}.map.tsv",
             barcode = barcodes.keys()),
@@ -197,6 +231,7 @@ rule gather_spots:
             barcode = barcodes.keys())
     output:
         tax = "results/rRNA/{subunit}/{sample}.assignTaxonomy.tsv",
+        boot = "results/rRNA/{subunit}/{sample}.assignTaxonomy.bootstrap.tsv",
         tsv = "results/rRNA/{subunit}/{sample}.map.tsv",
         stats = "results/rRNA/{subunit}/{sample}.stats.tsv"
     params:
@@ -204,32 +239,20 @@ rule gather_spots:
         tmp2 = "$TMPDIR/{subunit}.{sample}.mapfile.tsv",
         tmp3 = "$TMPDIR/{subunit}.{sample}.stats.tsv"
     run:
+        # Concatenate tsv and stats files
         concat_files(input.tsv, output.tsv)
         concat_files(input.stats, output.stats)
-        df = pd.DataFrame()
-        for f in input.tax:
-            _df = pd.read_csv(f, sep="\t", index_col=0, header=0)
-            df = pd.concat([df, _df])
-        df.to_csv(output.tax, sep="\t")
-
-rule filter_seqs:
-    input:
-        "results/rRNA/{subunit}/{sample}.sampled.R2.rRNA.fastq.gz"
-    output:
-        "results/rRNA/{subunit}/{sample}.sampled.filtered.R2.rRNA.fastq.gz"
-    log:
-        "results/logs/{subunit}/{sample}.filter_nonDNA.log"
-    conda: "envs/seqkit.yml"
-    params:
-        seq_type = "fastq"
-    script: "scripts/filter_seqs.py"
+        concat_df(input.tax, output.tax)
+        concat_df(input.boot, output.boot)
 
 ## Sample target rule
 rule sample:
     input:
-        expand("results/rRNA/{subunit}/{sample}.sampled.filtered.R2.rRNA.fastq.gz",
+        expand("results/rRNA/{subunit}/{sample}.assignTaxonomy.tsv",
             subunit = config["subunits"], sample = samples.keys()),
         expand("results/rRNA/{subunit}/{sample}.map.tsv",
+            subunit = config["subunits"], sample = samples.keys()),
+        expand("results/rRNA/{subunit}/{sample}.stats.tsv",
             subunit = config["subunits"], sample = samples.keys())
 
 rule multiqc:
@@ -325,31 +348,6 @@ rule filter_species_fasta:
         seq_type = "fasta"
     script:
         "scripts/filter_seqs.py"
-
-rule assign_taxonomy:
-    """
-    Assigns taxonomy to the R2 reads identified as rRNA by sortmerna 
-    """
-    input:
-        seqs = "results/rRNA/{subunit}/{sample}.sampled.filtered.R2.rRNA.fastq.gz",
-        refFasta = "resources/DADA2/{subunit}.assignTaxonomy.reformat.fasta",
-        spFasta = "resources/DADA2/{subunit}.addSpecies.filtered.fasta"
-    output:
-        taxdf = report("results/taxonomy/{sample}.{subunit}.assignTaxonomy.tsv"),
-        bootdf = "results/taxonomy/{sample}.{subunit}.assignTaxonomy.bootstrap.tsv"
-    log:
-        "results/logs/assignTaxonomy.{sample}.{subunit}.log"
-    params:
-        minBoot = config["assignTaxonomy"]["minBoot"],
-        outputBootstraps = config["assignTaxonomy"]["outputBootstraps"],
-        tryRC = config["assignTaxonomy"]["tryRC"],
-        taxLevels = lambda wildcards: config["assignTaxonomy"]["ranks"][wildcards.subunit]
-    conda: "envs/dada2.yml"
-    resources:
-        runtime = lambda wildcards, attempt: attempt**2*60*10
-    threads: config["assignTaxonomy"]["threads"]
-    script:
-        "scripts/assignTaxa.R"
 
 rule download_vsearch:
     output:
