@@ -17,13 +17,20 @@ outputBootstraps <- snakemake@params$outputBootstraps
 threads <- snakemake@threads
 
 library(dada2)
+library(ShortRead)
+reads <- readFastq(seqs)
+if (length(reads) == 0) {
+    writeLines("", taxdf_file)
+    writeLines("", bootdf_file)
+    quit(save = "no", status = 0)
+}
 set.seed(100)
 taxonomy <- assignTaxonomy(seqs=seqs, refFasta=refFasta, minBoot=minBoot, taxLevels=taxLevels,
                            outputBootstraps=outputBootstraps, tryRC=tryRC,
                            multithread=threads, verbose=TRUE)
 df <- as.data.frame(taxonomy)
 # Remove sequences with numbered suffix (resulting from duplicates)
-df <- df[-grep("[0-9]", rownames(df)), ]
+df <- df[grep("[0-9]", rownames(df), invert=TRUE), ]
 sequences <- as.character(dimnames(taxonomy$tax)[[1]])
 seqids <- names(dimnames(taxonomy$tax)[[1]])
 seqidmap <- as.data.frame(seqids, row.names=sequences)
