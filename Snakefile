@@ -26,6 +26,12 @@ validate(config,schema="config/config.schema.yml",set_default=True)
 samples = parse_samples(config["sample_list"])
 barcodes = read_barcodes(config["barcode_list"])
 
+for sample, d in samples.items():
+    try:
+        d["filter_rank"]
+    except KeyError:
+        samples[sample]["filter_rank"] = "genus"
+
 wildcard_constraints:
     barcode = "({})".format("|".join(barcodes.keys())),
     subunit = "16S|18S",
@@ -207,13 +213,14 @@ def concat_files(files, outfile):
                 shutil.copyfileobj(fhin,fhout)
 
 def concat_df(files, outfile):
-    import pandas as pd
-    df = pd.DataFrame()
+    import pandas
+    df = pandas.DataFrame()
     for f in files:
-        if os.stat(f).st_size==0:
+        try:
+            _df = pandas.read_csv(f, sep="\t", index_col=0, header=0)
+        except pandas.errors.EmptyDataError:
             continue
-        _df = pd.read_csv(f, sep="\t", index_col=0, header=0)
-        df = pd.concat([df, _df])
+        df = pandas.concat([df, _df])
     df.to_csv(outfile, sep="\t")
 
 rule gather_spots:
@@ -382,6 +389,38 @@ rule vsearch:
             --sintax_cutoff {params.cutoff} --tabbedout {output[0]} > {log} 2>&1 
         """
 
+def split_common_reads(tax16f, tax18f, boot16f, boot18f):
+    tax16 = pd.read_csv(tax16f,header=0,sep="\t",index_col=0)
+    tax18 = pd.read_csv(tax18f,header=0,sep="\t",index_col=0)
+    boot16 = pd.read_csv(boot16f,header=0,sep="\t",index_col=0)
+    boot18 = pd.read_csv(boot18f,header=0,sep="\t",index_col=0)
+    common_reads = set(tax18.index).intersection(tax16.index)
+    common_ranks = set(tax18.columns).intersection(tax16.columns)
+    common_ranks = [rank for rank in tax18.columns if rank in common_ranks]
+    drop = {"16S": [], "18S": []}
+    for r in common_reads:
+        tax18s = tax18.loc[r]
+        tax16s = tax16.loc[r]
+        boot_18s = boot18.loc[r]
+        boot_16s = boot16.loc[r]
+        # Start from most specific rank
+        for rank in reversed(common_ranks):
+            if tax18s[rank]==tax18s[rank] and tax16s[rank]!=tax16s[rank]:
+                drop["16S"].append(r)
+                break
+            elif tax18s[rank]!=tax18s[rank] and tax16s[rank]==tax16s[rank]:
+                drop["18S"].append(r)
+                break
+            elif tax18s[rank]!=tax18s[rank] and tax16s[rank]!=tax16s[rank]:
+                continue
+            if boot_18s[rank] >= boot_16s[rank]:
+                drop["16S"].append(r)
+                break
+            else:
+                drop["18S"].append(r)
+                break
+    return drop
+
 rule spot_taxonomy:
     input:
         tax = expand("results/taxonomy/{{sample}}.{subunit}.assignTaxonomy.tsv",
@@ -395,7 +434,7 @@ rule spot_taxonomy:
         "results/taxonomy/{sample}.16S.assignTaxonomy.spot_taxonomy.tsv",
         "results/taxonomy/{sample}.18S.assignTaxonomy.spot_taxonomy.tsv"
     params:
-        filter_rank = "genus",
+        filter_rank = lambda wildcards: samples[wildcards.sample]["filter_rank"],
         minBoot = 75,
         subunits = config["subunits"]
     run:
@@ -406,25 +445,35 @@ rule spot_taxonomy:
         barcodes["coord"] = barcodes[["x", "y"]].agg("x".join,axis=1)
         barcodes = barcodes.drop(["x","y"], axis=1).to_dict()["coord"]
 
-        taxdf = pd.read_csv(input.tax, sep="\t", header=0, index_col=0)
-        bootdf = pd.read_csv(input.boot, sep="\t", header=0, index_col=0)
-        bootdf = bootdf.loc[bootdf[params.filter_rank] >= params.minBoot]
-        reads = set(bootdf.index).intersection(taxdf.index)
-        taxdf = taxdf.loc[reads]
-        ranks = list(taxdf.columns)
-        mapdf = pd.read_csv(input.mapfile, sep="\t", index_col=0, header=0,
-            names=["read_id", "umi", "spot"])
-        spot_taxdf = pd.merge(taxdf, mapdf.drop("umi", axis=1), how="inner", left_index=True,
-            right_index=True)
-        spot_taxdf.fillna("Unassigned", inplace=True)
-        # add taxonomy column
-        spot_taxdf["taxonomy"] = spot_taxdf[ranks].agg(";".join,axis=1)
-        # groupby and count
-        spot_taxonomy_counts = spot_taxdf.groupby(["spot", "taxonomy"]).count().loc[:, ranks[0]]
-        spot_taxonomy_counts = pd.DataFrame(spot_taxonomy_counts.reset_index().rename(columns={ranks[0]: 'n'}))
-        spot_taxonomy_counts = pd.pivot_table(spot_taxonomy_counts, columns="spot", index="taxonomy")
-        spot_taxonomy_counts = spot_taxonomy_counts["n"].fillna(0)
-        index = list(spot_taxonomy_counts.sum(axis=1).sort_values(ascending=False).index)
-        # Transpose dataframe and change index names
-        spot_taxonomy_counts = spot_taxonomy_counts.rename(columns=barcodes)
-        spot_taxonomy_counts.loc[index].T.to_csv(output[0], sep="\t")
+        # If running with more than one subunit, identify common reads and
+        # split them depending on bootstrap to the different subunits
+        drop = {"16S": [], "18S": []}
+        if len(config["subunits"]) > 1:
+            drop = split_common_reads(sorted(input.tax), sorted(input.boot))
+        for i, tax in enumerate(sorted(input.tax)):
+            boot = input.boot[i]
+            subunit = tax.split(".")[-3]
+            taxdf = pd.read_csv(tax, sep="\t", header=0, index_col=0)
+            taxdf.drop(drop[subunit])
+            bootdf = pd.read_csv(input.boot, sep="\t", header=0, index_col=0)
+            bootdf.drop(drop[subunit])
+            bootdf = bootdf.loc[bootdf[params.filter_rank] >= params.minBoot]
+            reads = set(bootdf.index).intersection(taxdf.index)
+            taxdf = taxdf.loc[reads]
+            ranks = list(taxdf.columns)
+            mapdf = pd.read_csv(input.mapfile, sep="\t", index_col=0, header=0,
+                names=["read_id", "umi", "spot"])
+            spot_taxdf = pd.merge(taxdf, mapdf.drop("umi", axis=1), how="inner", left_index=True,
+                right_index=True)
+            spot_taxdf.fillna("Unassigned", inplace=True)
+            # add taxonomy column
+            spot_taxdf["taxonomy"] = spot_taxdf[ranks].agg(";".join,axis=1)
+            # groupby and count
+            spot_taxonomy_counts = spot_taxdf.groupby(["spot", "taxonomy"]).count().loc[:, ranks[0]]
+            spot_taxonomy_counts = pd.DataFrame(spot_taxonomy_counts.reset_index().rename(columns={ranks[0]: 'n'}))
+            spot_taxonomy_counts = pd.pivot_table(spot_taxonomy_counts, columns="spot", index="taxonomy")
+            spot_taxonomy_counts = spot_taxonomy_counts["n"].fillna(0)
+            index = list(spot_taxonomy_counts.sum(axis=1).sort_values(ascending=False).index)
+            # Transpose dataframe and change index names
+            spot_taxonomy_counts = spot_taxonomy_counts.rename(columns=barcodes)
+            spot_taxonomy_counts.loc[index].T.to_csv(output[i], sep="\t")
