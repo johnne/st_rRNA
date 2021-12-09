@@ -389,7 +389,9 @@ rule vsearch:
             --sintax_cutoff {params.cutoff} --tabbedout {output[0]} > {log} 2>&1 
         """
 
-def split_common_reads(tax16f, tax18f, boot16f, boot18f):
+def split_common_reads(taxf, bootf):
+    tax16f, tax18f = taxf
+    boot16f, boot18f = bootf
     tax16 = pd.read_csv(tax16f,header=0,sep="\t",index_col=0)
     tax18 = pd.read_csv(tax18f,header=0,sep="\t",index_col=0)
     boot16 = pd.read_csv(boot16f,header=0,sep="\t",index_col=0)
