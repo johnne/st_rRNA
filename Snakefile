@@ -435,12 +435,16 @@ rule spot_taxonomy:
     output:
         "results/taxonomy/{sample}.16S.assignTaxonomy.spot_taxonomy.tsv",
         "results/taxonomy/{sample}.18S.assignTaxonomy.spot_taxonomy.tsv"
+    log:
+        "results/logs/{sample}.spot_taxonomy.log"
     params:
         filter_rank = lambda wildcards: samples[wildcards.sample]["filter_rank"],
         minBoot = 75,
         subunits = config["subunits"]
     run:
+        logfh = open(log[0], 'w')
         # Read barcodes
+        logfh.write(f"Reading barcodes from {input.barcodes}\n")
         barcodes = pd.read_csv(input.barcodes, sep="\t", index_col=0, header=0,
         dtype=str, names=["barcode", "x", "y"])
         # Make coord column and create renaming dictionary
@@ -452,18 +456,25 @@ rule spot_taxonomy:
         drop = {"16S": [], "18S": []}
         if len(config["subunits"]) > 1:
             drop = split_common_reads(sorted(input.tax), sorted(input.boot))
-        for i, tax in enumerate(sorted(input.tax)):
-            boot = input.boot[i]
-            subunit = tax.split(".")[-3]
-            taxdf = pd.read_csv(tax, sep="\t", header=0, index_col=0)
+            common_reads = len(drop['16S'])+len(drop['18S'])
+            logfh.write(f"Found a total of {common_reads} reads with matches to both subunits\n")
+        for i, taxfile in enumerate(sorted(input.tax)):
+            bootfile = sorted(input.boot)[i]
+            mapfile = sorted(input.mapfile)[i]
+            outfile = sorted(output)[i]
+            subunit = taxfile.split(".")[-3]
+            logfh.write(f"Taxfile: {taxfile}\nBootstraps: {bootfile}\nMapfile: {mapfile}\nOutfile: {outfile}\nSubunit: {subunit}\n")
+            taxdf = pd.read_csv(taxfile, sep="\t", header=0, index_col=0)
             taxdf.drop(drop[subunit])
-            bootdf = pd.read_csv(input.boot, sep="\t", header=0, index_col=0)
+            if len(drop[subunit])>0:
+                logfh.write(f"Dropped {len(drop[subunit])} reads that had better assignment for other subunit\n")
+            bootdf = pd.read_csv(bootfile, sep="\t", header=0, index_col=0)
             bootdf.drop(drop[subunit])
             bootdf = bootdf.loc[bootdf[params.filter_rank] >= params.minBoot]
             reads = set(bootdf.index).intersection(taxdf.index)
             taxdf = taxdf.loc[reads]
             ranks = list(taxdf.columns)
-            mapdf = pd.read_csv(input.mapfile, sep="\t", index_col=0, header=0,
+            mapdf = pd.read_csv(mapfile, sep="\t", index_col=0, header=0,
                 names=["read_id", "umi", "spot"])
             spot_taxdf = pd.merge(taxdf, mapdf.drop("umi", axis=1), how="inner", left_index=True,
                 right_index=True)
@@ -478,4 +489,5 @@ rule spot_taxonomy:
             index = list(spot_taxonomy_counts.sum(axis=1).sort_values(ascending=False).index)
             # Transpose dataframe and change index names
             spot_taxonomy_counts = spot_taxonomy_counts.rename(columns=barcodes)
-            spot_taxonomy_counts.loc[index].T.to_csv(output[i], sep="\t")
+            spot_taxonomy_counts.loc[index].T.to_csv(outfile, sep="\t")
+        logfh.close()
