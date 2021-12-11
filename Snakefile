@@ -425,9 +425,10 @@ def split_common_reads(taxf, bootf):
 
 rule spot_taxonomy:
     input:
-        tax = expand("results/taxonomy/{{sample}}.{subunit}.assignTaxonomy.tsv",
+
+        tax = expand("results/rRNA/{subunit}/{{sample}}.assignTaxonomy.tsv",
             subunit = config["subunits"]),
-        boot = expand("results/taxonomy/{{sample}}.{subunit}.assignTaxonomy.bootstrap.tsv",
+        boot = expand("results/rRNA/{subunit}/{{sample}}.assignTaxonomy.bootstrap.tsv",
             subunit = config["subunits"]),
         mapfile = expand("results/rRNA/{subunit}/{{sample}}.map.tsv",
             subunit = config["subunits"]),
