@@ -83,7 +83,7 @@ rule sortmerna:
         ref_string = lambda wildcards, input: " ".join([f"--ref {x}" for x in input.db])
     threads: 20
     resources:
-        runtime = lambda wildcards, attempt: attempt ** 2 * 60 * 120
+        runtime = lambda wildcards, attempt: attempt ** 2 * 60 * 4
     shell:
         """
         if [ -z ${{TMPDIR+x}} ]; then TMPDIR=temp; fi
