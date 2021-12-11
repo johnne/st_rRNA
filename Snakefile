@@ -148,7 +148,7 @@ rule sample_spots:
         R1 = "$TMPDIR/{subunit}.{sample}.{barcode}/{sample}.{barcode}.R1.rRNA.fastq",
         R2 = "$TMPDIR/{subunit}.{sample}.{barcode}/{sample}.{barcode}.R2.rRNA.subsampled.fastq.gz"
     resources:
-        runtime = lambda wildcards, attempt: attempt ** 2 * 60 * 2
+        runtime = lambda wildcards, attempt: attempt ** 2 * 10
     conda: "envs/seqkit.yml"
     shell:
         """
