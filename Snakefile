@@ -425,7 +425,6 @@ def split_common_reads(taxf, bootf):
 
 rule spot_taxonomy:
     input:
-
         tax = expand("results/rRNA/{subunit}/{{sample}}.assignTaxonomy.tsv",
             subunit = config["subunits"]),
         boot = expand("results/rRNA/{subunit}/{{sample}}.assignTaxonomy.bootstrap.tsv",
@@ -463,7 +462,7 @@ rule spot_taxonomy:
             bootfile = sorted(input.boot)[i]
             mapfile = sorted(input.mapfile)[i]
             outfile = sorted(output)[i]
-            subunit = taxfile.split(".")[-3]
+            subunit = taxfile.split("/")[-2]
             logfh.write(f"Taxfile: {taxfile}\nBootstraps: {bootfile}\nMapfile: {mapfile}\nOutfile: {outfile}\nSubunit: {subunit}\n")
             taxdf = pd.read_csv(taxfile, sep="\t", header=0, index_col=0)
             taxdf.drop(drop[subunit])
