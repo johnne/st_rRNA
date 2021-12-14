@@ -20,9 +20,12 @@ def read_fastq(f, umi_start=18, umi_stop=25):
     """
     umi_dict = {}
     for read in SeqIO.parse(f, "fastq"):
+        # Extract the umi based on umi start and stop
         umi = read.seq[umi_start:umi_stop]
+        # Attempt to add read to a list with this umi as key
         try:
             umi_dict[umi].append(read)
+        # If umi has not been added, create a new list and add the read
         except KeyError:
             umi_dict[umi] = [read]
     return umi_dict
@@ -36,6 +39,8 @@ def get_umi_rep(umi_dict):
     :return: dictionary with one read per UMI
     """
     umi_reps = {}
+    # Iterate the key->value (UMI -> list of reads) pairs
+    # and select 1 read at random from the list corresponding to the UMI
     for umi, reads in umi_dict.items():
         umi_reps[umi] = random.sample(reads, k=1)[0]
     return umi_reps
@@ -52,9 +57,13 @@ def sample_spot(umi_reps, X=100):
     """
     reads = []
     read_to_umi = {}
+    # Iterate umi->representative read key/value pairs
     for umi, read in umi_reps.items():
+        # Store a link of read ID -> UMI map
         read_to_umi[read.id] = umi
+        # Add representative read to list
         reads.append(read)
+    # Finally, sample X reads from the list of representative reads
     sampled_reads = random.sample(reads, k=min(X, len(reads)))
     return sampled_reads, read_to_umi
 
@@ -93,22 +102,37 @@ def write_read_ids(sampled_reads):
 
 
 def write_stats(umi_dict, statsfile, barcode):
+    """
+    Write a table with statistics of UMIs and number of reads per UMI found
+    in each spot (barcode)
+
+    :param umi_dict: Dictionary of UMIs and their reads
+    :param statsfile: Output file
+    :param barcode: Barcode (spot) being sampled
+    :return:
+    """
     if barcode:
         barcode_string = f"\t{barcode}\n"
     else:
         barcode_string = "\n"
     with open(statsfile, 'w') as fhout:
         for umi, reads in umi_dict.items():
+            # Write UMI<tab>number of reads<barcode>
             fhout.write(f"{umi}\t{len(reads)}{barcode_string}")
 
 
-
 def main(args):
+    # Get a dictionary of unique UMIs (keys) and a list of reads with
+    # those UMIs (values)
     umi_dict = read_fastq(args.R1, args.start, args.stop)
+    # Write to file
     if args.stats:
         write_stats(umi_dict, args.stats, args.barcode)
+    # Extract 1 representative sequence for each UMI
     umi_reps = get_umi_rep(umi_dict)
+    # Sample args.num_reads from representative reads
     sampled_reads, read_to_umi = sample_spot(umi_reps, args.num_reads)
+
     write_read_ids(sampled_reads)
     if args.mapfile is not None:
         write_mapfile(args.mapfile, args.barcode, sampled_reads, read_to_umi)
