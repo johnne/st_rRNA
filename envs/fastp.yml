@@ -1,8 +1,7 @@
-name: metaxa
+name: fastp
 channels:
   - bioconda
   - conda-forge
   - defaults
 dependencies:
-  - metaxa=2.2
-  - blast=2.2.31
+  - fastp=0.23.2
