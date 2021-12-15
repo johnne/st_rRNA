@@ -9,7 +9,8 @@ localrules:
     sample,
     gather_spots,
     sample_spots,
-    concat_fasta
+    concat_fasta,
+    spot_taxonomy
 
 configfile: "config/config.yml"
 rRNA = {"16S": ["silva-arc-16s-id95.fasta", "silva-bac-16s-id90.fasta"],
