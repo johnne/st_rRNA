@@ -136,8 +136,6 @@ rule multiqc:
     input:
         expand("results/logs/fastp/{sample}.log",
             sample=samples.keys()),
-        expand("results/logs/cutadapt/{sample}.log",
-            sample=samples.keys()),
         expand("results/fastqc/{sample}_{R}_fastqc.zip",
             R=["R1","R2"], sample=samples.keys())
     output:
