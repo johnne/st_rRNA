@@ -38,6 +38,8 @@ rule report:
             sample = samples.keys()),
         expand("results/metaxa2/{sample}.{domain}.fasta",
             sample = samples.keys(), domain = ["archaea","bacteria","chloroplast","eukaryota"]),
+        expand("results/taxonomy/{sample}.metaxa2.spot_taxonomy.tsv",
+            sample = samples.keys()),
         "results/report/multiqc.html"
 
 rule cutadapt:
@@ -288,7 +290,7 @@ rule spot_taxonomy:
     params:
         score = config["metaxa2"]["score_cutoff"]
     run:
-        fhlog = open(log[0], 'w')
+        import pandas as pd
         # Read taxonomy table
         taxdf = pd.read_csv(input.tax, sep="\t", index_col=0, header=None,
             names=["ID", "Classification", "Identity", "Length", "Score"])
