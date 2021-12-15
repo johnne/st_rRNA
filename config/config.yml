@@ -1,5 +1,13 @@
 sample_list: "config/samples.tsv"
 barcode_list: "config/barcodes.tsv"
+cutadapt:
+  R1_adapter: "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA"
+  R2_adapter: "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT"
+  minlen: 20
+  extra_params: "-e 0.3"
+fastp:
+  complexity_cutoff: 30
+  extra_params: ""
 # Subunits to analyse, currently only 16S and 18S are supported
 sortmerna:
   evalue: 0.0000000001
@@ -7,7 +15,7 @@ subunits:
   - "16S"
   - "18S"
 # Sequences per spots
-seqs_per_spot: 500
+seqs_per_spot: 0
 UMI:
   start: 18
   stop: 25
@@ -30,3 +38,6 @@ assignTaxonomy:
   ranks:
     16S: ["superkingdom", "phylum", "class", "order", "family", "genus"]
     18S: ["kingdom", "supergroup", "division", "class", "order", "family", "genus"]
+metaxa2:
+  # Reliability score cutoff for taxonomic assignments
+  score_cutoff: 75
