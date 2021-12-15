@@ -70,7 +70,7 @@ rule cutadapt:
 
 rule fastp:
     input:
-        R2 = rules.cutadapt.output.R2
+        R2=lambda wildcards: samples[wildcards.sample]["R2"]
     output:
         R2 = "results/fastp/{sample}_R2.fastq.gz"
     log:
