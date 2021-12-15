@@ -64,7 +64,11 @@ def sample_spot(umi_reps, X=100):
         # Add representative read to list
         reads.append(read)
     # Finally, sample X reads from the list of representative reads
-    sampled_reads = random.sample(reads, k=min(X, len(reads)))
+    # if X is 0, set X to all reads
+    if X == 0:
+        sampled_reads = reads
+    else:
+        sampled_reads = random.sample(reads, k=min(X, len(reads)))
     return sampled_reads, read_to_umi
 
 
