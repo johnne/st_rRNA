@@ -40,6 +40,22 @@ properties:
       18S:
         type: string
         description: "URL to sintax 18S db"
+  metaxa2:
+    type: object
+    default:
+      score_cutoff: 0
+      percent_id: 95
+      lengt: 100
+    properties:
+      score_cutoff:
+        type: integer
+        description: Minimum reliability score for filtering Metaxa2 hits
+      percent_id:
+        type: integer
+        description: Minimum percent identity for filtering Metaxa2 hits
+      length:
+        type: integer
+        description: Minimum alignment length for filtering Metaxa2 hits
   assignTaxonomy:
     type: object
     default:

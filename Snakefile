@@ -286,6 +286,8 @@ rule spot_taxonomy:
     output:
         "results/taxonomy/{sample}.metaxa2.spot_taxonomy.tsv"
     params:
-        score = config["metaxa2"]["score_cutoff"]
+        score = config["metaxa2"]["score_cutoff"],
+        pid = config["metaxa2"]["percent_id"],
+        sum_rank = config["metaxa2"]["sum_rank"]
     script:
         "scripts/common.py"

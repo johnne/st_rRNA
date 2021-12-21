@@ -22,11 +22,13 @@ def read_barcodes(f):
 def spot_taxonomy(sm):
     import pandas as pd
     # Read taxonomy table
-    taxdf = pd.read_csv(sm.input.tax, sep="\t", index_col=0, header=None,
-                        names=["ID", "Classification", "Identity", "Length",
-                               "Score"])
+    taxdf = pd.read_csv(sm.input.tax, keep_default_na=True, dtype = {'length': float},
+                    na_values=[" N/A"], header=None, sep="\t", index_col=0,
+                        names=["read","classification", "pid", "length", "score"])
     # Filter taxonomy to assignments above threshold
-    taxdf = taxdf.loc[taxdf.Score >= sm.params.score]
+    taxdf = taxdf.loc[taxdf.score >= sm.params.score]
+    taxdf = taxdf.loc[taxdf.pid >= sm.params.pid]
+    #TODO: Summarize classifications at sm.params.sum_rank level
 
     # Read barcodes
     barcodes = pd.read_csv(sm.input.barcodes, sep="\t", index_col=0, header=0,

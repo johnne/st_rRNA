@@ -40,4 +40,8 @@ assignTaxonomy:
     18S: ["kingdom", "supergroup", "division", "class", "order", "family", "genus"]
 metaxa2:
   # Reliability score cutoff for taxonomic assignments
-  score_cutoff: 75
+  score_cutoff: 0
+  # Minimum percent identity to trust taxonomic assignments
+  percent_id: 95
+  # Rank level at which to summarize classifications for spot counts
+  sum_rank: 6
