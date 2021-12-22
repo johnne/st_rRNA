@@ -24,12 +24,11 @@ def spot_taxonomy(sm):
     # Read taxonomy table
     taxdf = pd.read_csv(sm.input.tax, keep_default_na=True, dtype = {'length': float},
                     na_values=[" N/A"], header=None, sep="\t", index_col=0,
-                        names=["read","classification", "pid", "length", "score"])
+                        names=["ID", "Classification", "Identity", "Length", "Score"])
+    # Remove NA values
+    taxdf = taxdf.loc[taxdf.Length == taxdf.Length]
     # Filter taxonomy to assignments above threshold
-    taxdf = taxdf.loc[taxdf.score >= sm.params.score]
-    taxdf = taxdf.loc[taxdf.pid >= sm.params.pid]
-    #TODO: Summarize classifications at sm.params.sum_rank level
-
+    taxdf = taxdf.loc[(taxdf["Score"] >= sm.params.score)&(taxdf.Identity >= sm.params.pid)&(taxdf.Length >= sm.params.length)]
     # Read barcodes
     barcodes = pd.read_csv(sm.input.barcodes, sep="\t", index_col=0, header=0,
                            dtype=str, names=["barcode", "x", "y"])
@@ -46,7 +45,7 @@ def spot_taxonomy(sm):
                           left_index=True, right_index=True)
     spot_taxdf.fillna("Unassigned", inplace=True)
     # groupby and count assignments per spot
-    spot_taxonomy_counts = spot_taxdf.groupby(["spot", "Classification"]).count().loc[:, "Score"]
+    spot_taxonomy_counts = spot_taxdf.groupby(["spot", "Classification"]).count().loc[:, "Identity"]
     spot_taxonomy_counts = pd.DataFrame(spot_taxonomy_counts.reset_index())
     spot_taxonomy_counts = pd.pivot_table(pd.DataFrame(spot_taxonomy_counts),
                                           columns="spot",

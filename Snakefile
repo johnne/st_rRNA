@@ -288,6 +288,6 @@ rule spot_taxonomy:
     params:
         score = config["metaxa2"]["score_cutoff"],
         pid = config["metaxa2"]["percent_id"],
-        sum_rank = config["metaxa2"]["sum_rank"]
+        length = config["metaxa2"]["length"]
     script:
         "scripts/common.py"

@@ -43,5 +43,5 @@ metaxa2:
   score_cutoff: 0
   # Minimum percent identity to trust taxonomic assignments
   percent_id: 95
-  # Rank level at which to summarize classifications for spot counts
-  sum_rank: 6
+  # Minimum alignment length for trusted classifications
+  length: 100
