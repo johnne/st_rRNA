@@ -191,6 +191,14 @@ rule sample_spots:
         """
 
 ## Run Metaxa2
+
+rule metaxa_build_pr2:
+    """
+    Format PR2 database and build blast database for use with metaxa2
+    """
+    input:
+
+
 rule metaxa:
     input:
         R2 = rules.sample_spots.output.R2
