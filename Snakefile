@@ -190,18 +190,56 @@ rule sample_spots:
         mv {params.R2} {output.R2}
         """
 
-## Run Metaxa2
+## METAXA2 ##
 
-rule metaxa_build_pr2:
+rule download_pr2:
+    output:
+        fasta = "resources/pr2/pr2.dada.fasta"
+    params:
+        url=config["metaxa2"]["taxdb"]["18S"],
+        tmp="$TMPDIR/pr2.dada2.fasta"
+    log:
+        "results/logs/pr2/download.log"
+    shell:
+        """
+        exec &> {log}
+        curl -L -o {params.tmp}.gz {params.url} 
+        gunzip {params.tmp}.gz
+        mv {params.tmp} {output.fasta}
+        """
+
+rule format_pr2:
     """
-    Format PR2 database and build blast database for use with metaxa2
+    Format PR2 database
     """
     input:
+        fasta = rules.download_pr2.output.fasta
+    output:
+        fasta = "resources/pr2/pr2.reformat.fasta",
+        taxfile = "resources/pr2/blast.taxonomy.txt"
+    conda: "envs/seqkit.yml"
+    script:
+        "scripts/common.py"
 
+
+rule metaxa_build_pr2:
+    input:
+        fasta = rules.format_pr2.output.fasta
+    output:
+        expand("resources/pr2/blast.{s}", s = ["nhr","nin","nsd","nsi","nsq"])
+    conda: "envs/metaxa.yml"
+    params:
+        outdir = lambda wildcards, output: os.path.dirname(output[0])
+    shell:
+        """
+        makeblastdb -in {input.fasta} -out {params.outdir}/blast -parse_seqids \
+            -hash_index -dbtype nucl -input_type fasta
+        """
 
 rule metaxa:
     input:
-        R2 = rules.sample_spots.output.R2
+        R2 = rules.sample_spots.output.R2,
+        taxfile = rules.format_pr2.output.taxfile
     output:
         expand("results/metaxa2/spots/{{barcode}}/{{sample}}.{domain}.fasta",
             domain=["archaea","bacteria","chloroplast","eukaryota"]),

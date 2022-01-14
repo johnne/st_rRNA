@@ -1,6 +1,3 @@
-import pandas as pd
-
-
 def rRNA_fasta(wildcards):
     input = []
     for f in rRNA[wildcards.subunit]:
@@ -9,11 +6,13 @@ def rRNA_fasta(wildcards):
 
 
 def parse_samples(f):
+    import pandas as pd
     df = pd.read_csv(f, index_col=0, sep="\t", header=0)
     return df.to_dict(orient="index")
 
 
 def read_barcodes(f):
+    import pandas as pd
     df = pd.read_csv(f, index_col=0, sep="\t", header=None,
                      names=["barcode","x","y"])
     return df.to_dict(orient="index")
@@ -57,8 +56,18 @@ def spot_taxonomy(sm):
     spot_taxonomy_counts.loc[index].T.to_csv(sm.output[0], sep="\t")
 
 
+def format_pr2(sm):
+    from Bio.SeqIO import parse
+    with open(sm.input.fasta, 'r') as fhin, open(sm.output.fasta, 'w') as fhout, open(sm.output.taxfile, 'w') as fhout_tax:
+        for i, record in enumerate(parse(fhin, "fasta"), start=1):
+            desc = record.id
+            fhout.write(f">record_{i} {desc}\n{record.seq}\n")
+            fhout_tax.write(f"record_{i}\t{desc}\n")
+
+
 def main(sm):
-    toolbox = {'spot_taxonomy': spot_taxonomy}
+    toolbox = {'spot_taxonomy': spot_taxonomy,
+               'format_pr2': format_pr2}
     toolbox[sm.rule](sm)
 
 

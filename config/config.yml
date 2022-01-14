@@ -45,3 +45,5 @@ metaxa2:
   percent_id: 95
   # Minimum alignment length for trusted classifications
   length: 100
+  taxdb:
+    18S: "https://github.com/pr2database/pr2database/releases/download/v4.14.0/pr2_version_4.14.0_SSU_dada2.fasta.gz"
