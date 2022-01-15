@@ -43,10 +43,16 @@ properties:
   metaxa2:
     type: object
     default:
-      score_cutoff: 0
+      score_cutoff: 50
+      domains:
+        - eukaryota
+      cutoffs: "0,60,70,70,75,85,90,95"
       percent_id: 95
       lengt: 100
     properties:
+      cutoffs:
+        type: string
+        description: Taxonomic cutoff string to use with Metaxa2 (-T option)
       score_cutoff:
         type: integer
         description: Minimum reliability score for filtering Metaxa2 hits

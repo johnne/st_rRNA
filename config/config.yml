@@ -39,11 +39,27 @@ assignTaxonomy:
     16S: ["superkingdom", "phylum", "class", "order", "family", "genus"]
     18S: ["kingdom", "supergroup", "division", "class", "order", "family", "genus"]
 metaxa2:
-  # Reliability score cutoff for taxonomic assignments
-  score_cutoff: 0
-  # Minimum percent identity to trust taxonomic assignments
-  percent_id: 95
-  # Minimum alignment length for trusted classifications
-  length: 100
+  # Instead of the default metaxa2 database we implement the PR2 database by downloading and reformatting it
   taxdb:
     18S: "https://github.com/pr2database/pr2database/releases/download/v4.14.0/pr2_version_4.14.0_SSU_dada2.fasta.gz"
+  # metaxa2 taxonomic cutoffs #
+  #############################
+  # with the PR2 database the ranks are (more or less):
+  # "kingdom", "supergroup", "division", "class", "order", "family", "genus", "species"
+  # the default taxonomic cutoffs for Metaxa2 are:
+  # Kingdom/Domain (0), Phylum (60), Class (70), Order (75), Family (85), Genus (90), Species (97)
+  # here we use the default:
+  # kingdom (0), supergroup (60), division (70), class (70), order (75), family (85), genus (90), species (95)
+  cutoffs: "0,60,70,70,75,85,90,95"
+  # taxa-profiles to search #
+  ###########################
+  # can be any of 'bacteria', 'archaea', 'eukaryota', 'mitochondrial', 'chloroplast'
+  domains: ["eukaryota"]
+  # Reliability score #
+  #####################
+  # cutoff to use for taxonomic assignments
+  score_cutoff: 0
+  # Minimum percent identity to trust taxonomic assignments
+  percent_id: 90
+  # Minimum alignment length for trusted classifications
+  length: 100
