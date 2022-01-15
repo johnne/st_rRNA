@@ -10,7 +10,10 @@ localrules:
     gather_spots,
     sample_spots,
     concat_fasta,
-    spot_taxonomy
+    spot_taxonomy,
+    download_pr2,
+    format_pr2,
+    metaxa_build_pr2
 
 configfile: "config/config.yml"
 rRNA = {"16S": ["silva-arc-16s-id95.fasta", "silva-bac-16s-id90.fasta"],
