@@ -239,19 +239,23 @@ rule metaxa_build_pr2:
 rule metaxa:
     input:
         R2 = rules.sample_spots.output.R2,
-        taxfile = rules.format_pr2.output.taxfile
+        taxfile = rules.format_pr2.output.taxfile,
+        blastdb = expand("resources/pr2/blast.{s}",
+            s = ["nhr","nin","nsd","nsi","nsq"])
     output:
         expand("results/metaxa2/spots/{{barcode}}/{{sample}}.{domain}.fasta",
-            domain=["archaea","bacteria","chloroplast","eukaryota"]),
+            domain=config["metaxa2"]["domains"]),
         expand("results/metaxa2/spots/{{barcode}}/{{sample}}.{f}.txt",
             f = ["taxonomy","summary"])
     log:
         "results/logs/metaxa2/{sample}.{barcode}.log"
     params:
+        blastdb = "resources/pr2/blast",
+        domains = ",".join(config["metaxa2"]["domains"]),
+        cutoffs = config["metaxa2"]["cutoffs"],
         out = "results/metaxa2/spots/{barcode}/{sample}",
         qual_percent = 10,
         qual = 20,
-        relscore = 0,
         R2 = "$TMPDIR/{sample}.{barcode}.R2.fastq"
     conda: "envs/metaxa.yml"
     threads: 2
@@ -261,8 +265,8 @@ rule metaxa:
         """
         gunzip -c {input.R2} > {params.R2}
         metaxa2 -R 0 --cpu {threads} -i {params.R2} --plus -g ssu -f fastq \
-            --quality_trim T -q {params.qual} \
-            --quality_percent {params.qual_percent} -o {params.out} > {log} 2>&1
+            --quality_trim T -q {params.qual} --quality_percent {params.qual_percent} \
+             -d {params.blastdb} -t {params.domains} -T {params.cutoffs} -o {params.out} > {log} 2>&1
         rm {params.R2}
         """
 
