@@ -27,7 +27,7 @@ def spot_taxonomy(sm):
     # Remove NA values
     taxdf = taxdf.loc[taxdf.Length == taxdf.Length]
     # Filter taxonomy to assignments above threshold
-    taxdf = taxdf.loc[(taxdf["Score"] >= sm.params.score)&(taxdf.Identity >= sm.params.pid)&(taxdf.Length >= sm.params.length)]
+    taxdf = taxdf.loc[(taxdf.Score >= sm.params.score)&(taxdf.Identity >= sm.params.pid)&(taxdf.Length >= sm.params.length)]
     # Read barcodes
     barcodes = pd.read_csv(sm.input.barcodes, sep="\t", index_col=0, header=0,
                            dtype=str, names=["barcode", "x", "y"])
@@ -49,18 +49,18 @@ def spot_taxonomy(sm):
     spot_taxonomy_counts = pd.pivot_table(pd.DataFrame(spot_taxonomy_counts),
                                           columns="spot",
                                           index="Classification")
-    spot_taxonomy_counts = spot_taxonomy_counts["Score"].fillna(0)
+    spot_taxonomy_counts = spot_taxonomy_counts.fillna(0)
     index = list(spot_taxonomy_counts.sum(axis=1).sort_values(ascending=False).index)
     # Transpose dataframe and change index names
     spot_taxonomy_counts = spot_taxonomy_counts.rename(columns=barcodes)
-    spot_taxonomy_counts.loc[index].T.to_csv(sm.output[0], sep="\t")
+    spot_taxonomy_counts.T.loc["Identity", index].to_csv(sm.output[0], sep="\t")
 
 
 def format_pr2(sm):
     from Bio.SeqIO import parse
     with open(sm.input.fasta, 'r') as fhin, open(sm.output.fasta, 'w') as fhout, open(sm.output.taxfile, 'w') as fhout_tax:
         for i, record in enumerate(parse(fhin, "fasta"), start=1):
-            desc = record.id
+            desc = (record.id).rstrip(";")
             fhout.write(f">record_{i} {desc}\n{record.seq}\n")
             fhout_tax.write(f"record_{i}\t{desc}\n")
 
